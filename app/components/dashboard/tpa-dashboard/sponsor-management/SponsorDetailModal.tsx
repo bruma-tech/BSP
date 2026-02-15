@@ -2,6 +2,18 @@
 
 import { useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
+
+function useEscape(open: boolean, onClose: () => void) {
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        if (open) {
+            document.addEventListener('keydown', handleEscape);
+            return () => document.removeEventListener('keydown', handleEscape);
+        }
+    }, [open, onClose]);
+}
 import StatusBadge from './StatusBadge';
 
 interface Sponsor {
@@ -40,6 +52,7 @@ interface SponsorDetailModalProps {
 }
 
 export default function SponsorDetailModal({ sponsor, onClose }: SponsorDetailModalProps) {
+    useEscape(!!sponsor, onClose);
     useEffect(() => {
         if (sponsor) {
             document.body.style.overflow = 'hidden';
@@ -66,8 +79,15 @@ export default function SponsorDetailModal({ sponsor, onClose }: SponsorDetailMo
     ];
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50">
-            <div className="bg-card rounded-lg shadow-modal w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50"
+            onClick={onClose}
+            role="presentation"
+        >
+            <div
+                className="bg-card rounded-lg shadow-modal w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-lg">

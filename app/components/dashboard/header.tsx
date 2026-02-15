@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Icon from '../ui/AppIcon';
@@ -23,6 +23,23 @@ const Header = ({
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+    const isAnyPopupOpen = isQuickActionOpen || isNotificationOpen || isUserMenuOpen;
+    const closeAllPopups = () => {
+        setIsQuickActionOpen(false);
+        setIsNotificationOpen(false);
+        setIsUserMenuOpen(false);
+    };
+
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') closeAllPopups();
+        };
+        if (isAnyPopupOpen) {
+            document.addEventListener('keydown', handleEscape);
+            return () => document.removeEventListener('keydown', handleEscape);
+        }
+    }, [isAnyPopupOpen]);
 
     const tpaNavigation = [
         { name: 'Dashboard', href: '/tpa-dashboard', icon: 'ChartBarIcon' },
@@ -81,6 +98,13 @@ const Header = ({
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {isAnyPopupOpen && (
+                        <div
+                            className="fixed inset-0 z-[199]"
+                            aria-hidden
+                            onClick={closeAllPopups}
+                        />
+                    )}
                     <div className="md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted">
                         <div className={`w-2 h-2 rounded-full ${userRole === 'tpa' ? 'bg-primary' : 'bg-accent'}`} />
                         <span className="text-xs font-medium text-foreground capitalize">{userRole}</span>

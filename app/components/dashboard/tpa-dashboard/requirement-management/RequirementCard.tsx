@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
 
 interface Sponsor {
@@ -38,6 +38,16 @@ const RequirementCard = ({
     onDelete,
 }: RequirementCardProps) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setIsMenuOpen(false);
+        };
+        if (isMenuOpen) {
+            document.addEventListener('keydown', handleEscape);
+            return () => document.removeEventListener('keydown', handleEscape);
+        }
+    }, [isMenuOpen]);
 
     const getStatusColor = (status: string) => {
         switch (status) {
