@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
+import { useEscapeKey } from "@/hooks/useEscapeKey";
+
 interface AddSponsorModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -38,15 +40,8 @@ export default function AddSponsorModal({ isOpen, onClose, onAdd }: AddSponsorMo
         };
     }, [isOpen]);
 
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-        if (isOpen) {
-            document.addEventListener('keydown', handleEscape);
-            return () => document.removeEventListener('keydown', handleEscape);
-        }
-    }, [isOpen, onClose]);
+    useEscapeKey(isOpen, onClose);
+
 
     const validateForm = (): boolean => {
         const newErrors: Partial<Record<keyof NewSponsor, string>> = {};

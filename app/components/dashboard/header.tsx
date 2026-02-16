@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Icon from '../ui/AppIcon';
 import { wix } from '@/app/components/ui/fonts';
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 interface HeaderProps {
     userRole?: 'tpa' | 'sponsor';
@@ -30,16 +31,7 @@ const Header = ({
         setIsNotificationOpen(false);
         setIsUserMenuOpen(false);
     };
-
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') closeAllPopups();
-        };
-        if (isAnyPopupOpen) {
-            document.addEventListener('keydown', handleEscape);
-            return () => document.removeEventListener('keydown', handleEscape);
-        }
-    }, [isAnyPopupOpen]);
+   useEscapeKey(isAnyPopupOpen, closeAllPopups);
 
     const tpaNavigation = [
         { name: 'Dashboard', href: '/tpa-dashboard', icon: 'ChartBarIcon' },
