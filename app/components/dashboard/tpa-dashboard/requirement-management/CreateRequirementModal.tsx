@@ -120,8 +120,6 @@ const CreateRequirementModal = ({ isOpen, onClose, onSubmit, sponsors }: CreateR
     };
 
     useEscapeKey(isOpen, onClose );
-
-
     if (!isOpen) return null;
 
     return (

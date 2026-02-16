@@ -5,8 +5,6 @@ export const useEscapeKey = (
   callback: () => void
 ) => {
   const callbackRef = useRef(callback);
-
-  // always keep latest callback
   useEffect(() => {
     callbackRef.current = callback;
   }, [callback]);

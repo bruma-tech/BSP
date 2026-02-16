@@ -41,7 +41,6 @@ const RequirementCard = ({
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEscapeKey(isMenuOpen, () => setIsMenuOpen(false));
-
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'completed':
