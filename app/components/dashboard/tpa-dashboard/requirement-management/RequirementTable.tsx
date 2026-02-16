@@ -53,8 +53,6 @@ const RequirementTable = ({
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
     useEscapeKey(!!openMenuId,() =>setOpenMenuId(null));
-
-
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'completed':

@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
 import { useEscapeKey } from "@/hooks/useEscapeKey";
-
 import StatusBadge from './StatusBadge';
 
 interface Sponsor {

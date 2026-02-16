@@ -41,8 +41,6 @@ export default function AddSponsorModal({ isOpen, onClose, onAdd }: AddSponsorMo
     }, [isOpen]);
 
     useEscapeKey(isOpen, onClose);
-
-
     const validateForm = (): boolean => {
         const newErrors: Partial<Record<keyof NewSponsor, string>> = {};
 
