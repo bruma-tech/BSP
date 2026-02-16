@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Icon from "@/app/components/ui/AppIcon";
+import { commentSchema, CommentFormData } from "@/lib/validation/commentSchema";
+import { ZodError } from "zod";
 
 interface Comment {
     id: string;
@@ -18,12 +20,49 @@ interface CommentSystemProps {
 }
 
 const CommentSystem = ({ comments, onAddComment }: CommentSystemProps) => {
+
     const [newComment, setNewComment] = useState('');
     const [isRevisionRequest, setIsRevisionRequest] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = () => {
-        if (!newComment.trim()) return;
-        onAddComment(newComment, isRevisionRequest);
+        console.log("Comment Submit Clicked");
+
+        const formData: CommentFormData = {
+            content: newComment,
+            isRevisionRequest: isRevisionRequest,
+        };
+
+        const result = commentSchema.safeParse(formData);
+
+        // ❌ VALIDATION FAILED
+        if (result.success === false) {
+            console.log("Comment Validation Failed ❌");
+
+            const zodError = result.error as ZodError;
+            const message = zodError.issues[0].message;
+
+            console.log("Error:", message);
+            setError(message);
+            return;
+        }
+
+        // ✅ VALIDATION SUCCESS
+        console.log("Comment Validation Passed ✅");
+
+        const jsonPayload = {
+            success: true,
+            data: result.data,
+        };
+
+        console.log("Generated Comment JSON:");
+        console.log(JSON.stringify(jsonPayload, null, 2));
+
+        setError(null);
+
+        // original functionality
+        onAddComment(result.data.content, result.data.isRevisionRequest);
+
         setNewComment('');
         setIsRevisionRequest(false);
     };
@@ -68,11 +107,19 @@ const CommentSystem = ({ comments, onAddComment }: CommentSystemProps) => {
             <div className="pt-4 border-t border-border space-y-3">
                 <textarea
                     value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
+                    onChange={(e) => {
+                        setNewComment(e.target.value);
+                        if (error) setError(null);
+                    }}
                     placeholder="Add your feedback or request revisions..."
                     className="w-full px-4 py-3 bg-background border border-input rounded-md text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                     rows={3}
                 />
+
+                {error && (
+                    <p className="text-sm text-error">{error}</p>
+                )}
+
                 <div className="flex items-center justify-between gap-3">
                     <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -85,8 +132,7 @@ const CommentSystem = ({ comments, onAddComment }: CommentSystemProps) => {
                     </label>
                     <button
                         onClick={handleSubmit}
-                        disabled={!newComment.trim()}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors duration-fast disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors duration-fast"
                     >
                         <Icon name="PaperAirplaneIcon" size={16} />
                         Add Comment

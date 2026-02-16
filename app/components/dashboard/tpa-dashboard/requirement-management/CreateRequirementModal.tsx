@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
+import { requirementSchema } from "@/lib/validation/requirementSchema";
+import { ZodError } from "zod";
+import { useEscape } from "@/hooks/useEscape";
+
+
+useEscape({ isOpen, onClose });
 
 interface Sponsor {
     id: string;
@@ -30,6 +36,7 @@ export interface RequirementFormData {
 }
 
 const CreateRequirementModal = ({ isOpen, onClose, onSubmit, sponsors }: CreateRequirementModalProps) => {
+
     const [formData, setFormData] = useState<RequirementFormData>({
         title: '',
         description: '',
@@ -44,6 +51,14 @@ const CreateRequirementModal = ({ isOpen, onClose, onSubmit, sponsors }: CreateR
     });
 
     const [errors, setErrors] = useState<Partial<Record<keyof RequirementFormData, string>>>({});
+    const [today, setToday] = useState("");
+
+
+    useEffect(() => {
+        const localToday = new Date();
+        localToday.setMinutes(localToday.getMinutes() - localToday.getTimezoneOffset());
+        setToday(localToday.toISOString().split("T")[0]);
+    }, []);
 
     const requirementTypes = [
         'Financial Report',
@@ -55,44 +70,34 @@ const CreateRequirementModal = ({ isOpen, onClose, onSubmit, sponsors }: CreateR
         'Other',
     ];
 
-    const validateForm = (): boolean => {
-        const newErrors: Partial<Record<keyof RequirementFormData, string>> = {};
-
-        if (!formData.title.trim()) {
-            newErrors.title = 'Title is required';
-        }
-        if (!formData.description.trim()) {
-            newErrors.description = 'Description is required';
-        }
-        if (!formData.dueDate) {
-            newErrors.dueDate = 'Due date is required';
-        }
-        if (formData.assignedSponsors.length === 0) {
-            newErrors.assignedSponsors = 'At least one sponsor must be selected';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (validateForm()) {
-            onSubmit(formData);
-            setFormData({
-                title: '',
-                description: '',
-                type: 'Financial Report',
-                priority: 'medium',
-                dueDate: '',
-                assignedSponsors: [],
-                documentSpecs: '',
-                approvalWorkflow: 'single-reviewer',
-                notifyOnSubmission: true,
-                allowResubmission: true,
+
+        console.log("Requirement Submit Clicked");
+
+        const result = requirementSchema.safeParse(formData);
+
+        if (!result.success) {
+            console.log("Requirement Validation Failed ❌");
+
+            const fieldErrors: Partial<Record<keyof RequirementFormData, string>> = {};
+            const zodError = result.error as ZodError;
+
+            zodError.issues.forEach((issue) => {
+                const field = issue.path[0] as keyof RequirementFormData;
+                console.log(`Field: ${String(field)} | Error: ${issue.message}`);
+                fieldErrors[field] = issue.message;
             });
-            setErrors({});
+
+            setErrors(fieldErrors);
+            return;
         }
+
+        console.log("Requirement Validation Passed ✅");
+        console.log(JSON.stringify(result.data, null, 2));
+
+        setErrors({});
+        onSubmit(result.data);
     };
 
     const toggleSponsor = (sponsorId: string) => {
@@ -118,238 +123,122 @@ const CreateRequirementModal = ({ isOpen, onClose, onSubmit, sponsors }: CreateR
         }));
     };
 
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-        if (isOpen) {
-            document.addEventListener('keydown', handleEscape);
-            return () => document.removeEventListener('keydown', handleEscape);
-        }
-    }, [isOpen, onClose]);
-
     if (!isOpen) return null;
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex mt-10 items-center justify-center p-4 bg-black/50"
-            onClick={onClose}
-            role="presentation"
-        >
-            <div
-                className="bg-card border border-border rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-            >
+        <div className="fixed inset-0 z-50 flex mt-10 items-center justify-center p-4 bg-black/50">
+            <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+
+                {}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                     <h2 className="text-xl font-semibold text-foreground">Create New Requirement</h2>
-                    <button
-                        onClick={onClose}
-                        className="p-2 rounded-md hover:bg-muted transition-colors duration-200"
-                        aria-label="Close modal"
-                    >
+                    <button onClick={onClose} className="p-2 rounded-md hover:bg-muted">
                         <Icon name="XMarkIcon" size={24} className="text-muted-foreground" />
                     </button>
                 </div>
 
+                {/* FORM */}
                 <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-6">
                     <div className="space-y-6">
+
+                        {/* TITLE */}
                         <div>
-                            <label htmlFor="title" className="block text-sm font-medium text-foreground mb-2">
-                                Requirement Title *
-                            </label>
+                            <label className="block text-sm font-medium mb-2">Requirement Title *</label>
                             <input
                                 type="text"
-                                id="title"
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                className={`w-full px-4 py-2 rounded-md border ${errors.title ? 'border-error' : 'border-border'
-                                    } bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary`}
-                                placeholder="Enter requirement title"
+                                className={`w-full px-4 py-2 border rounded-md ${errors.title ? 'border-error' : 'border-border'}`}
                             />
-                            {errors.title && <p className="text-sm text-error mt-1">{errors.title}</p>}
+                            {errors.title && <p className="text-error text-sm mt-1">{errors.title}</p>}
                         </div>
 
+                        {/* DESCRIPTION */}
                         <div>
-                            <label htmlFor="description" className="block text-sm font-medium text-foreground mb-2">
-                                Description *
-                            </label>
+                            <label className="block text-sm font-medium mb-2">Description *</label>
                             <textarea
-                                id="description"
+                                rows={4}
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                rows={4}
-                                className={`w-full px-4 py-2 rounded-md border ${errors.description ? 'border-error' : 'border-border'
-                                    } bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none`}
-                                placeholder="Describe the requirement in detail"
+                                className={`w-full px-4 py-2 border rounded-md ${errors.description ? 'border-error' : 'border-border'}`}
                             />
-                            {errors.description && <p className="text-sm text-error mt-1">{errors.description}</p>}
+                            {errors.description && <p className="text-error text-sm mt-1">{errors.description}</p>}
                         </div>
 
+                        {/* TYPE + PRIORITY + DATE */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label htmlFor="type" className="block text-sm font-medium text-foreground mb-2">
-                                    Type
-                                </label>
-                                <select
-                                    id="type"
-                                    value={formData.type}
-                                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                                    className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                                >
-                                    {requirementTypes.map((type) => (
-                                        <option key={type} value={type}>
-                                            {type}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
 
-                            <div>
-                                <label htmlFor="priority" className="block text-sm font-medium text-foreground mb-2">
-                                    Priority
-                                </label>
-                                <select
-                                    id="priority"
-                                    value={formData.priority}
-                                    onChange={(e) => setFormData({ ...formData, priority: e.target.value as 'low' | 'medium' | 'high' })}
-                                    className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                                >
-                                    <option value="low">Low</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="high">High</option>
-                                </select>
-                            </div>
+                            <select
+                                value={formData.type}
+                                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                className="px-4 py-2 border rounded-md"
+                            >
+                                {requirementTypes.map((type) => (
+                                    <option key={type}>{type}</option>
+                                ))}
+                            </select>
 
-                            <div>
-                                <label htmlFor="dueDate" className="block text-sm font-medium text-foreground mb-2">
-                                    Due Date *
-                                </label>
-                                <input
-                                    type="date"
-                                    id="dueDate"
-                                    value={formData.dueDate}
-                                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                                    className={`w-full px-4 py-2 rounded-md border ${errors.dueDate ? 'border-error' : 'border-border'
-                                        } bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary`}
-                                />
-                                {errors.dueDate && <p className="text-sm text-error mt-1">{errors.dueDate}</p>}
-                            </div>
+                            <select
+                                value={formData.priority}
+                                onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
+                                className="px-4 py-2 border rounded-md"
+                            >
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </select>
+
+                            <input
+                                type="date"
+                                min={today}
+                                value={formData.dueDate}
+                                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                                className={`px-4 py-2 border rounded-md ${errors.dueDate ? 'border-error' : 'border-border'}`}
+                            />
                         </div>
 
+                        {}
                         <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-medium text-foreground">
+                            <div className="flex justify-between mb-2">
+                                <span className="text-sm font-medium">
                                     Assign to Sponsors * ({formData.assignedSponsors.length} selected)
-                                </label>
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={selectAllSponsors}
-                                        className="text-xs text-primary hover:text-primary/80 transition-colors duration-200"
-                                    >
-                                        Select All
-                                    </button>
-                                    <span className="text-xs text-muted-foreground">|</span>
-                                    <button
-                                        type="button"
-                                        onClick={deselectAllSponsors}
-                                        className="text-xs text-primary hover:text-primary/80 transition-colors duration-200"
-                                    >
-                                        Deselect All
-                                    </button>
+                                </span>
+
+                                <div className="flex gap-2 text-xs">
+                                    <button type="button" onClick={selectAllSponsors}>Select All</button>
+                                    <button type="button" onClick={deselectAllSponsors}>Clear</button>
                                 </div>
                             </div>
-                            <div className={`border ${errors.assignedSponsors ? 'border-error' : 'border-border'} rounded-md p-4 max-h-48 overflow-y-auto bg-background`}>
+
+                            <div className="border rounded-md p-4 max-h-48 overflow-y-auto">
                                 {sponsors.map((sponsor) => (
-                                    <label
-                                        key={sponsor.id}
-                                        className="flex items-center gap-3 py-2 hover:bg-muted px-2 rounded-md cursor-pointer transition-colors duration-200"
-                                    >
+                                    <label key={sponsor.id} className="flex items-center gap-3 py-2 cursor-pointer">
                                         <input
                                             type="checkbox"
                                             checked={formData.assignedSponsors.includes(sponsor.id)}
                                             onChange={() => toggleSponsor(sponsor.id)}
-                                            className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
                                         />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-foreground">{sponsor.name}</p>
+                                        <div>
+                                            <p className="text-sm font-medium">{sponsor.name}</p>
                                             <p className="text-xs text-muted-foreground">{sponsor.email}</p>
                                         </div>
                                     </label>
                                 ))}
                             </div>
-                            {errors.assignedSponsors && <p className="text-sm text-error mt-1">{errors.assignedSponsors}</p>}
+                            {errors.assignedSponsors && <p className="text-error text-sm mt-1">{errors.assignedSponsors}</p>}
                         </div>
 
-                        <div>
-                            <label htmlFor="documentSpecs" className="block text-sm font-medium text-foreground mb-2">
-                                Document Specifications
-                            </label>
-                            <textarea
-                                id="documentSpecs"
-                                value={formData.documentSpecs}
-                                onChange={(e) => setFormData({ ...formData, documentSpecs: e.target.value })}
-                                rows={3}
-                                className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                                placeholder="Specify document format, size limits, naming conventions, etc."
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor="approvalWorkflow" className="block text-sm font-medium text-foreground mb-2">
-                                Approval Workflow
-                            </label>
-                            <select
-                                id="approvalWorkflow"
-                                value={formData.approvalWorkflow}
-                                onChange={(e) => setFormData({ ...formData, approvalWorkflow: e.target.value })}
-                                className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                            >
-                                <option value="single-reviewer">Single Reviewer</option>
-                                <option value="multi-reviewer">Multiple Reviewers</option>
-                                <option value="sequential">Sequential Approval</option>
-                            </select>
-                        </div>
-
-                        <div className="space-y-3">
-                            <label className="flex items-center gap-3 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={formData.notifyOnSubmission}
-                                    onChange={(e) => setFormData({ ...formData, notifyOnSubmission: e.target.checked })}
-                                    className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
-                                />
-                                <span className="text-sm text-foreground">Notify me when documents are submitted</span>
-                            </label>
-
-                            <label className="flex items-center gap-3 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={formData.allowResubmission}
-                                    onChange={(e) => setFormData({ ...formData, allowResubmission: e.target.checked })}
-                                    className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
-                                />
-                                <span className="text-sm text-foreground">Allow document resubmission after rejection</span>
-                            </label>
-                        </div>
                     </div>
                 </form>
 
-                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-6 py-2 rounded-md border border-border text-foreground hover:bg-muted transition-colors duration-200"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleSubmit}
-                        className="px-6 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-200"
-                    >
+                {}
+                <div className="flex justify-end gap-3 px-6 py-4 border-t">
+                    <button onClick={onClose} className="px-6 py-2 border rounded-md">Cancel</button>
+                    <button onClick={handleSubmit} className="px-6 py-2 bg-primary text-white rounded-md">
                         Create Requirement
                     </button>
                 </div>
+
             </div>
         </div>
     );
