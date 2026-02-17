@@ -31,10 +31,21 @@ export default function LoginForm() {
         <LoginSlider value={loginType} onChange={setLoginType} />
       </div>
       <form action={action} className="space-y-8">
+      {state?.error && (
+          <div className="rounded-md bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
+            {state.error}
+          </div>
+        )}
         <div className="space-y-2">
           <Label htmlFor="email">Email or Username</Label>
+          {state?.errors?.email && (
+          <div className="rounded-md bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
+            {state.errors.email?.join(', ')}
+          </div>
+        )}
           <Input
             id="email"
+            name="email"
             type="text"
             placeholder="Enter your email or username"
             className="h-12 border-gray-200
@@ -46,16 +57,13 @@ export default function LoginForm() {
                 "
           />
         </div>
-        {state?.errors && (
-          <div className="text-red-500">
-            {state.errors.email?.join(', ')}
-          </div>
-        )}
+        
         <div className="space-y-2">
           <Label htmlFor="password" className='mb-4'>Password</Label>
           <div className="relative">
             <Input
               id="password"
+              name="password"
               type={showPassword ? "text" : "password"}
               placeholder="Enter your password"
               // value={password}
@@ -76,8 +84,8 @@ export default function LoginForm() {
             </button>
           </div>
         </div>
-        {state?.errors && (
-          <div className="text-red-500">
+        {state?.errors?.password && (
+          <div className="rounded-md bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
             {state.errors.password?.join(', ')}
           </div>
         )}
