@@ -16,9 +16,7 @@ export async function POST(req: Request) {
                 field: issue.path[0],
                 message: issue.message
             }));
-
             console.log(errors);
-
             return NextResponse.json(
                 { success: false, errors },
                 { status: 400 }

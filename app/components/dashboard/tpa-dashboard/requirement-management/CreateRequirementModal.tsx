@@ -78,8 +78,7 @@ const CreateRequirementModal = ({ isOpen, onClose, onSubmit, sponsors }: CreateR
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-if (!validateForm()) return;
-const parsed = requirementSchema.safeParse(formData);
+    const parsed = requirementSchema.safeParse(formData);
 
 if (!parsed.success) {
     console.log("Client Zod Validation Failed");
