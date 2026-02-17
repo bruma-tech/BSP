@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
 interface AddSponsorModalProps {
@@ -26,7 +25,7 @@ export default function AddSponsorModal({ isOpen, onClose, onAdd }: AddSponsorMo
     });
 
     const [errors, setErrors] = useState<Partial<Record<keyof NewSponsor, string>>>({});
-
+    //const { modalType, closeModal } = useModal();
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';

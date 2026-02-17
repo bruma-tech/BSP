@@ -1,10 +1,10 @@
 'use client';
-
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Icon from '../ui/AppIcon';
 import { wix } from '@/app/components/ui/fonts';
+import { modalBus } from "@/app/lib/modalBus";
 
 interface HeaderProps {
     userRole?: 'tpa' | 'sponsor';
@@ -40,8 +40,8 @@ const Header = ({
 
     const quickActions = userRole === 'tpa'
         ? [
-            { name: 'Create Requirement', icon: 'PlusCircleIcon', action: () => console.log('Create Requirement') },
-            { name: 'Add Sponsor', icon: 'UserPlusIcon', action: () => console.log('Add Sponsor') },
+            { name: 'Create Requirement', icon: 'PlusCircleIcon', action: () => modalBus.open("requirement") },
+            { name: 'Add Sponsor', icon: 'UserPlusIcon', action: () => modalBus.open("sponsor") },
         ]
         : [
             { name: 'Upload Document', icon: 'ArrowUpTrayIcon', action: () => console.log('Upload Document') },

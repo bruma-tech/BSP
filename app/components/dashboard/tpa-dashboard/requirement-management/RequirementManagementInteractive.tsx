@@ -1,5 +1,6 @@
 'use client';
 
+import AddSponsorModal from "../sponsor-management/AddSponsorModal";
 import { useState, useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
 import CreateRequirementModal, { RequirementFormData } from './CreateRequirementModal';
@@ -7,7 +8,7 @@ import FilterPanel, { FilterState } from './FilterPanel'
 import RequirementTable from './RequirementTable';
 import RequirementCard from './RequirementCard';
 import BulkActionsBar from './BulkActionsBar';
-
+import { modalBus } from "@/app/lib/modalBus";
 
 interface Sponsor {
     id: string;
@@ -33,7 +34,6 @@ const RequirementManagementInteractive = () => {
     const [isHydrated, setIsHydrated] = useState(false);
     const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
     const [searchQuery, setSearchQuery] = useState('');
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [selectedRequirements, setSelectedRequirements] = useState<string[]>([]);
     const [sortColumn, setSortColumn] = useState('title');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -226,7 +226,7 @@ const RequirementManagementInteractive = () => {
         };
 
         setRequirements([newRequirement, ...requirements]);
-        setIsCreateModalOpen(false);
+
     };
 
     const handleEdit = (id: string) => {
@@ -351,7 +351,7 @@ const RequirementManagementInteractive = () => {
                     </div>
 
                     <button
-                        onClick={() => setIsCreateModalOpen(true)}
+                        onClick={() => modalBus.open("requirement")}
                         className="flex flex-1 justify-center items-center gap-2 px-6 py-3 rounded-md bg-primary text-primary-foreground hover:cursor-pointer hover:bg-primary/90 transition-colors duration-200 whitespace-nowrap"
                     >
                         <Icon name="PlusIcon" size={20} />
@@ -425,13 +425,6 @@ const RequirementManagementInteractive = () => {
                 onSendReminders={handleBulkSendReminders}
                 onDelete={handleBulkDelete}
                 onClearSelection={() => setSelectedRequirements([])}
-            />
-
-            <CreateRequirementModal
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onSubmit={handleCreateRequirement}
-                sponsors={mockSponsors}
             />
         </div>
     );
