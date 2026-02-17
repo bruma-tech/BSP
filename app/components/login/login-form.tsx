@@ -12,6 +12,7 @@ import LoginSlider from './LoginSlider';
 import { Input } from '../ui/input';
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from 'next/navigation';
+import { authClient } from '@/app/lib/auth-client';
 
 export default function LoginForm() {
   const [loginType, setLoginType] = useState<"tpa" | "sponsor">("tpa");
@@ -20,9 +21,25 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push('/tpa-dashboard');
+    const {data, error} = await authClient.signUp.email({
+      name: "Demo User1",
+      email: "demo1@gmail.com",
+      password: "helloDemo@123",
+    },{
+      onRequest: (context) => {
+        console.log(context);
+      },
+      onSuccess: (data) => {
+        console.log(data);
+      },
+      onError: (error) => {
+        console.log(error);
+      },
+    })
+
+    // router.push('/tpa-dashboard');
   };
 
   return (
