@@ -2,41 +2,40 @@ import { NextResponse } from "next/server";
 import { commentSchema } from "@/lib/validation/commentSchema";
 
 export async function POST(req: Request) {
-  try {
-    const body = await req.json();
+    console.log("========== COMMENT API HIT ==========");
 
-    const parsed = commentSchema.safeParse(body);
+    try {
+        const body = await req.json();
+        console.log("Incoming Comment Data:");
+        console.log(body);
 
-    if (!parsed.success) {
-      const errors = (parsed.error as import("zod").ZodError<any>).issues.map((e) => ({
-        field: String(e.path[0]),
-        message: e.message,
-      }));
+        const parsed = commentSchema.safeParse(body);
+        if (!parsed.success) {
+            console.log("Comment Validation Failed");
+            const errors = parsed.error.issues.map(issue => ({
+                field: issue.path[0],
+                message: issue.message
+            }));
 
-      return NextResponse.json(
-        { success: false, errors },
-        { status: 400 }
-      );
+            console.log(errors);
+
+            return NextResponse.json(
+                { success: false, errors },
+                { status: 400 }
+            );
+        }
+        console.log("Comment Validation Passed");
+        return NextResponse.json({
+            success: true,
+            message: "Comment stored successfully (mock)",
+            data: parsed.data
+        });
+
+    } catch (err) {
+        console.log("Server Error:", err);
+        return NextResponse.json(
+            { success: false, message: "Invalid JSON" },
+            { status: 500 }
+        );
     }
-
-    const saved = {
-      id: "CMT-" + Date.now(),
-      createdAt: new Date().toISOString(),
-      ...parsed.data,
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: saved,
-    });
-
-  } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        errors: [{ field: "general", message: "Unable to post comment" }],
-      },
-      { status: 500 }
-    );
-  }
 }

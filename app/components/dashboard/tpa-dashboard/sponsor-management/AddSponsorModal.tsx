@@ -1,8 +1,9 @@
 'use client';
 import { sponsorSchema } from "@/lib/validation/sponsorSchema";
-import { ZodError } from "zod";
 import { useState, useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
+import { useEscapeKey } from "@/hooks/useEscapeKey";
+
 interface AddSponsorModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -39,16 +40,7 @@ export default function AddSponsorModal({ isOpen, onClose, onAdd }: AddSponsorMo
         };
     }, [isOpen]);
 
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-        if (isOpen) {
-            document.addEventListener('keydown', handleEscape);
-            return () => document.removeEventListener('keydown', handleEscape);
-        }
-    }, [isOpen, onClose]);
-
+    useEscapeKey(isOpen, onClose);
     const validateForm = (): boolean => {
         const newErrors: Partial<Record<keyof NewSponsor, string>> = {};
 
@@ -74,40 +66,53 @@ export default function AddSponsorModal({ isOpen, onClose, onAdd }: AddSponsorMo
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-      
-        console.log("Submit button clicked");
-      
-        const result = sponsorSchema.safeParse(formData);
-      
-        // ❌ VALIDATION FAILED
-        if (result.success === false) {
-          console.log("Validation Failed ❌");
-      
-          const fieldErrors: Record<string, string> = {};
-      
-          const zodError = result.error as ZodError;
-          zodError.issues.forEach((issue) => {
-            const rawField = issue.path[0];
-            const field = typeof rawField === 'symbol' ? String(rawField) : String(rawField);
-            console.log(`Field: ${field} | Error: ${issue.message}`);
-            fieldErrors[field] = issue.message;
-          });
-      
-          setErrors(fieldErrors);
-          return;
-        }
-      
-        // ✅ VALIDATION SUCCESS
-        console.log("Validation Passed ✅");
-      
-        console.log("Generated JSON Payload:");
-        console.log(JSON.stringify(result.data, null, 2));
-      
-        setErrors({});
-      };
-      
+        if (!validateForm()) return;
+        const parsed = sponsorSchema.safeParse(formData);
+     if (!parsed.success) {
+        console.log("Client Zod Validation Failed");
+        const fieldErrors: Partial<Record<keyof NewSponsor, string>> = {};
+        parsed.error.issues.forEach(issue => {
+        const field = issue.path[0] as keyof NewSponsor;
+        fieldErrors[field] = issue.message;
+        console.log(field, ":", issue.message);
+    });
+
+        setErrors(fieldErrors);
+        return;
+    }
+       console.log("Client Validation Passed ");
+        try {
+            const payload = {
+                name: formData.name,
+                contactEmail: formData.contactEmail,
+                contactPhone: formData.contactPhone,
+                address: formData.address,
+                status: formData.status,
+            };
+            console.log("Sending Payload:", payload);
+        
+            const response = await fetch("/api/sponsors", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+            });
+        
+            const data = await response.json();
+            console.log("Server Response:", data);
+            if (!response.ok) {
+                console.log("Server rejected request");
+                return;
+            }
+            onAdd(formData);
+            onClose();
+        } catch (error) {
+            console.log("Network error:", error);
+        }        
+    };
 
     const handleChange = (field: keyof NewSponsor, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -181,12 +186,7 @@ export default function AddSponsorModal({ isOpen, onClose, onAdd }: AddSponsorMo
                                 type="tel"
                                 id="contactPhone"
                                 value={formData.contactPhone}
-                                onChange={(e) => {
-                
-                                    const value = e.target.value.replace(/\D/g, "");
-                                    setFormData({ ...formData, contactPhone: value });
-                                  }}
-                                  maxLength={10}
+                                onChange={(e) => handleChange('contactPhone', e.target.value)}
                                 className={`w-full px-4 py-2 rounded-md border ${errors.contactPhone ? 'border-error' : 'border-border'
                                     } bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary`}
                                 placeholder="(555) 123-4567"

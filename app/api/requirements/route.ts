@@ -3,15 +3,21 @@ import { requirementSchema } from "@/lib/validation/requirementSchema";
 
 export async function POST(req: Request) {
   try {
+    console.log("\n========== REQUIREMENT API HIT ==========");
+
     const body = await req.json();
+    console.log("Incoming Requirement Data:", body);
 
-    const parsed = requirementSchema.safeParse(body);
+    const result = requirementSchema.safeParse(body);
 
-    if (!parsed.success) {
-      const errors = parsed.error.errors.map((e) => ({
-        field: String(e.path[0]),
-        message: e.message,
+    if (!result.success) {
+      const errors = result.error.issues.map((err) => ({
+        field: err.path[0],
+        message: err.message,
       }));
+
+      console.log("Requirement Validation Failed");
+      console.log(errors);
 
       return NextResponse.json(
         { success: false, errors },
@@ -19,24 +25,19 @@ export async function POST(req: Request) {
       );
     }
 
-    const saved = {
-      id: "REQ-" + Date.now(),
-      createdAt: new Date().toISOString(),
-      status: "Pending",
-      ...parsed.data,
-    };
+    console.log("Requirement Validation Passed");
+    console.log("Clean Requirement Data:", result.data);
 
     return NextResponse.json({
       success: true,
-      data: saved,
+      data: result.data,
+      message: "Requirement stored (mock)",
     });
 
-  } catch {
+  } catch (err) {
+    console.log("Requirement API Crash:", err);
     return NextResponse.json(
-      {
-        success: false,
-        errors: [{ field: "general", message: "Server error" }],
-      },
+      { success: false, message: "Invalid JSON body" },
       { status: 500 }
     );
   }

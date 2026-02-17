@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 interface Sponsor {
     id: string;
@@ -39,16 +40,7 @@ const RequirementCard = ({
 }: RequirementCardProps) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setIsMenuOpen(false);
-        };
-        if (isMenuOpen) {
-            document.addEventListener('keydown', handleEscape);
-            return () => document.removeEventListener('keydown', handleEscape);
-        }
-    }, [isMenuOpen]);
-
+    useEscapeKey(isMenuOpen, () => setIsMenuOpen(false));
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'completed':

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 interface Sponsor {
     id: string;
@@ -51,16 +52,7 @@ const RequirementTable = ({
 }: RequirementTableProps) => {
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setOpenMenuId(null);
-        };
-        if (openMenuId) {
-            document.addEventListener('keydown', handleEscape);
-            return () => document.removeEventListener('keydown', handleEscape);
-        }
-    }, [openMenuId]);
-
+    useEscapeKey(!!openMenuId,() =>setOpenMenuId(null));
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'completed':

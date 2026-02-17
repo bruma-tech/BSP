@@ -2,18 +2,7 @@
 
 import { useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
-
-function useEscape(open: boolean, onClose: () => void) {
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-        if (open) {
-            document.addEventListener('keydown', handleEscape);
-            return () => document.removeEventListener('keydown', handleEscape);
-        }
-    }, [open, onClose]);
-}
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 import StatusBadge from './StatusBadge';
 
 interface Sponsor {
@@ -52,7 +41,7 @@ interface SponsorDetailModalProps {
 }
 
 export default function SponsorDetailModal({ sponsor, onClose }: SponsorDetailModalProps) {
-    useEscape(!!sponsor, onClose);
+    useEscapeKey(!!sponsor, onClose);
     useEffect(() => {
         if (sponsor) {
             document.body.style.overflow = 'hidden';

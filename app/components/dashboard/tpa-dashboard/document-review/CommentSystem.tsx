@@ -25,48 +25,48 @@ const CommentSystem = ({ comments, onAddComment }: CommentSystemProps) => {
     const [isRevisionRequest, setIsRevisionRequest] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
+        
         console.log("Comment Submit Clicked");
-
         const formData: CommentFormData = {
             content: newComment,
             isRevisionRequest: isRevisionRequest,
         };
-
         const result = commentSchema.safeParse(formData);
-
-        // ❌ VALIDATION FAILED
-        if (result.success === false) {
-            console.log("Comment Validation Failed ❌");
-
-            const zodError = result.error as ZodError;
-            const message = zodError.issues[0].message;
-
+        if (!result.success) {
+            console.log("Comment Validation Failed");
+            const message = result.error.issues[0].message;
             console.log("Error:", message);
             setError(message);
             return;
         }
-
-        // ✅ VALIDATION SUCCESS
-        console.log("Comment Validation Passed ✅");
-
-        const jsonPayload = {
-            success: true,
-            data: result.data,
-        };
-
-        console.log("Generated Comment JSON:");
-        console.log(JSON.stringify(jsonPayload, null, 2));
-
+    
+        console.log("Client Validation Passed");
         setError(null);
-
-        // original functionality
-        onAddComment(result.data.content, result.data.isRevisionRequest);
-
-        setNewComment('');
-        setIsRevisionRequest(false);
+        try {
+            const response = await fetch("/api/comments", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(result.data),
+            });
+            const data = await response.json();
+            console.log("Comment API Response:");
+            console.log(data);
+            if (!response.ok) {
+                console.log("Server rejected comment");
+                return;
+            }
+            onAddComment(result.data.content, result.data.isRevisionRequest);
+            setNewComment('');
+            setIsRevisionRequest(false);
+    
+        } catch (error) {
+            console.log("Network error:", error);
+        }
     };
-
+    
     return (
         <div className="bg-card rounded-lg border border-border p-6 space-y-4">
             <h3 className="text-lg font-semibold text-foreground">Comments & Feedback</h3>
