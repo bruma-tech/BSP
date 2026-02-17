@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 interface Sponsor {
     id: string;
@@ -39,6 +40,7 @@ const RequirementCard = ({
 }: RequirementCardProps) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+    useEscapeKey(isMenuOpen, () => setIsMenuOpen(false));
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'completed':

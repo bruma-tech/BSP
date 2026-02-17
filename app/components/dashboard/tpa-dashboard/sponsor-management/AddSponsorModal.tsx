@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
+import { useEscapeKey } from "@/hooks/useEscapeKey";
+
 interface AddSponsorModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -37,6 +39,7 @@ export default function AddSponsorModal({ isOpen, onClose, onAdd }: AddSponsorMo
         };
     }, [isOpen]);
 
+    useEscapeKey(isOpen, onClose);
     const validateForm = (): boolean => {
         const newErrors: Partial<Record<keyof NewSponsor, string>> = {};
 
@@ -88,8 +91,15 @@ export default function AddSponsorModal({ isOpen, onClose, onAdd }: AddSponsorMo
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50">
-            <div className="bg-card rounded-lg shadow-modal w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50"
+            onClick={onClose}
+            role="presentation"
+        >
+            <div
+                className="bg-card rounded-lg shadow-modal w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                     <h2 className="text-xl font-semibold text-foreground">Add New Sponsor</h2>
                     <button
