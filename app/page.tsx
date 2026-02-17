@@ -3,7 +3,7 @@ import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import Image from 'next/image';
 import { wix } from './components/ui/fonts';
-import LoginForm from './components/login/login-form';
+import LoginForm from './components/auth/login-form';
 import { ShieldCheck } from "lucide-react";
 
 export default function Page() {
