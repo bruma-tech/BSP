@@ -1,14 +1,13 @@
-import { betterAuth } from "better-auth";
-import { Pool } from "pg";
-import { nextCookies } from "better-auth/next-js";
-
+import { betterAuth } from 'better-auth'
+import { prismaAdapter } from 'better-auth/adapters/prisma'
+import prisma from './prisma'
 
 export const auth = betterAuth({
-    database: new Pool({
-        connectionString: "postgres://ggndp:helloGgndp@123@localhost:5432/brumavone",
-      }),
-      emailAndPassword: {
-        enabled: true,
-      },
-      plugins: [nextCookies()]
+  database: prismaAdapter(prisma, {
+    provider: 'postgresql',
+  }),
+  emailAndPassword: {
+    enabled: true,
+  },
+  trustedOrigins: ['http://localhost:3000']
 })
