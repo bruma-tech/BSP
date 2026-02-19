@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Icon from "@/app/components/ui/AppIcon";
+import { commentSchema, CommentFormData } from "@/lib/validation/commentSchema";
+import { ZodError } from "zod";
 
 interface Comment {
     id: string;
@@ -18,16 +20,53 @@ interface CommentSystemProps {
 }
 
 const CommentSystem = ({ comments, onAddComment }: CommentSystemProps) => {
+
     const [newComment, setNewComment] = useState('');
     const [isRevisionRequest, setIsRevisionRequest] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = () => {
-        if (!newComment.trim()) return;
-        onAddComment(newComment, isRevisionRequest);
-        setNewComment('');
-        setIsRevisionRequest(false);
+    const handleSubmit = async () => {
+        
+        console.log("Comment Submit Clicked");
+        const formData: CommentFormData = {
+            content: newComment,
+            isRevisionRequest: isRevisionRequest,
+        };
+        const result = commentSchema.safeParse(formData);
+        if (!result.success) {
+            console.log("Comment Validation Failed");
+            const message = result.error.issues[0].message;
+            console.log("Error:", message);
+            setError(message);
+            return;
+        }
+    
+        console.log("Client Validation Passed");
+        setError(null);
+        try {
+            const response = await fetch("/api/comments", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(result.data),
+            });
+            const data = await response.json();
+            console.log("Comment API Response:");
+            console.log(data);
+            if (!response.ok) {
+                console.log("Server rejected comment");
+                return;
+            }
+            onAddComment(result.data.content, result.data.isRevisionRequest);
+            setNewComment('');
+            setIsRevisionRequest(false);
+    
+        } catch (error) {
+            console.log("Network error:", error);
+        }
     };
-
+    
     return (
         <div className="bg-card rounded-lg border border-border p-6 space-y-4">
             <h3 className="text-lg font-semibold text-foreground">Comments & Feedback</h3>
@@ -68,11 +107,19 @@ const CommentSystem = ({ comments, onAddComment }: CommentSystemProps) => {
             <div className="pt-4 border-t border-border space-y-3">
                 <textarea
                     value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
+                    onChange={(e) => {
+                        setNewComment(e.target.value);
+                        if (error) setError(null);
+                    }}
                     placeholder="Add your feedback or request revisions..."
                     className="w-full px-4 py-3 bg-background border border-input rounded-md text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                     rows={3}
                 />
+
+                {error && (
+                    <p className="text-sm text-error">{error}</p>
+                )}
+
                 <div className="flex items-center justify-between gap-3">
                     <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -85,8 +132,7 @@ const CommentSystem = ({ comments, onAddComment }: CommentSystemProps) => {
                     </label>
                     <button
                         onClick={handleSubmit}
-                        disabled={!newComment.trim()}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors duration-fast disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors duration-fast"
                     >
                         <Icon name="PaperAirplaneIcon" size={16} />
                         Add Comment

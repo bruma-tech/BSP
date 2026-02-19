@@ -1,4 +1,5 @@
 'use client';
+import { sponsorSchema } from "@/lib/validation/sponsorSchema";
 import { useState, useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
 import { useEscapeKey } from "@/hooks/useEscapeKey";
@@ -65,20 +66,52 @@ export default function AddSponsorModal({ isOpen, onClose, onAdd }: AddSponsorMo
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (validateForm()) {
-            onAdd(formData);
-            setFormData({
-                name: '',
-                contactEmail: '',
-                contactPhone: '',
-                address: '',
-                status: 'pending'
+        if (!validateForm()) return;
+        const parsed = sponsorSchema.safeParse(formData);
+     if (!parsed.success) {
+        console.log("Client Zod Validation Failed");
+        const fieldErrors: Partial<Record<keyof NewSponsor, string>> = {};
+        parsed.error.issues.forEach(issue => {
+        const field = issue.path[0] as keyof NewSponsor;
+        fieldErrors[field] = issue.message;
+        console.log(field, ":", issue.message);
+    });
+
+        setErrors(fieldErrors);
+        return;
+    }
+       console.log("Client Validation Passed ");
+        try {
+            const payload = {
+                name: formData.name,
+                contactEmail: formData.contactEmail,
+                contactPhone: formData.contactPhone,
+                address: formData.address,
+                status: formData.status,
+            };
+            console.log("Sending Payload:", payload);
+        
+            const response = await fetch("/api/sponsors", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
             });
-            setErrors({});
+        
+            const data = await response.json();
+            console.log("Server Response:", data);
+            if (!response.ok) {
+                console.log("Server rejected request");
+                return;
+            }
+            onAdd(formData);
             onClose();
-        }
+        } catch (error) {
+            console.log("Network error:", error);
+        }        
     };
 
     const handleChange = (field: keyof NewSponsor, value: string) => {

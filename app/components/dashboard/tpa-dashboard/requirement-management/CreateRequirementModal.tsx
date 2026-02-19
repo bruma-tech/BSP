@@ -1,5 +1,5 @@
 'use client';
-
+import { requirementSchema } from "@/lib/validation/requirementSchema";
 import { useState, useEffect } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
 import { useEscapeKey } from "@/hooks/useEscapeKey";
@@ -76,24 +76,57 @@ const CreateRequirementModal = ({ isOpen, onClose, onSubmit, sponsors }: CreateR
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (validateForm()) {
-            onSubmit(formData);
-            setFormData({
-                title: '',
-                description: '',
-                type: 'Financial Report',
-                priority: 'medium',
-                dueDate: '',
-                assignedSponsors: [],
-                documentSpecs: '',
-                approvalWorkflow: 'single-reviewer',
-                notifyOnSubmission: true,
-                allowResubmission: true,
-            });
-            setErrors({});
-        }
+    const parsed = requirementSchema.safeParse(formData);
+
+if (!parsed.success) {
+    console.log("Client Zod Validation Failed");
+    parsed.error.issues.forEach(issue => {
+        console.log(issue.path[0], ":", issue.message);
+    });
+    return;
+}
+
+console.log(" Client Validation Passed");
+
+try {
+    const response = await fetch("/api/requirements", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(parsed.data),
+    });
+
+    const data = await response.json();
+    console.log("Response From Server:");
+    console.log(data);
+
+    if (!response.ok) {
+        console.log("Server rejected request");
+        return;
+    }
+
+    console.log("Requirement stored via Mock API");
+    onSubmit(parsed.data);
+    setFormData({
+        title: '',
+        description: '',
+        type: 'Financial Report',
+        priority: 'medium',
+        dueDate: '',
+        assignedSponsors: [],
+        documentSpecs: '',
+        approvalWorkflow: 'single-reviewer',
+        notifyOnSubmission: true,
+        allowResubmission: true,
+    });
+    setErrors({});
+
+} catch (error) {
+    console.log("Network Error:", error);
+}
     };
 
     const toggleSponsor = (sponsorId: string) => {
@@ -118,7 +151,13 @@ const CreateRequirementModal = ({ isOpen, onClose, onSubmit, sponsors }: CreateR
             assignedSponsors: [],
         }));
     };
-
+    const [today, setToday] = useState("");
+    useEffect(() => {
+        const localToday = new Date();
+        localToday.setMinutes(localToday.getMinutes() - localToday.getTimezoneOffset());
+        setToday(localToday.toISOString().split("T")[0]);
+    }, []);
+    
     useEscapeKey(isOpen, onClose );
     if (!isOpen) return null;
 
@@ -219,6 +258,7 @@ const CreateRequirementModal = ({ isOpen, onClose, onSubmit, sponsors }: CreateR
                                 <input
                                     type="date"
                                     id="dueDate"
+                                    min={today}
                                     value={formData.dueDate}
                                     onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                                     className={`w-full px-4 py-2 rounded-md border ${errors.dueDate ? 'border-error' : 'border-border'
