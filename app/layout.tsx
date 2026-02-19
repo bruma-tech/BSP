@@ -1,6 +1,8 @@
-import "@/app/components/global.css"
+import "@/app/components/global.css";
 import { inter } from "./components/ui/fonts";
-import './global.css'
+import "./global.css";
+import GlobalModal from "@/app/components/GlobalModal";
+
 export default function RootLayout({
   children,
 }: {
@@ -8,7 +10,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} antialiased`} >{children}</body>
+      <body className={`${inter.className} antialiased`}>
+        <GlobalModal />
+        {children}
+      </body>
     </html>
   );
 }

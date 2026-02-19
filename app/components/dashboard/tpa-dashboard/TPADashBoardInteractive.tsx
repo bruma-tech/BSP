@@ -7,6 +7,7 @@ import ActivityItem from './ActivityItem';
 import QuickActionButton from './QuickActionButton';
 import Icon from '@/app/components/ui/AppIcon';
 import SponsorTableRow from './SponsorTableRow';
+import { modalBus } from "@/app/lib/modalBus";
 
 interface Metric {
     id: string;
@@ -140,9 +141,10 @@ const TPADashboardInteractive = () => {
     ];
 
     const handleQuickAction = (action: string) => {
-        console.log(`Quick action: ${action}`);
+        if (action === "add-sponsor") modalBus.open("sponsor");
+        if (action === "create-requirement") modalBus.open("requirement");
     };
-
+    
     const handleSponsorClick = (sponsorId: number) => {
         console.log(`Navigate to sponsor: ${sponsorId}`);
     };
