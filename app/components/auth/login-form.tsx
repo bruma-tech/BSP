@@ -1,13 +1,13 @@
 'use client';
 
 import { Button } from '../ui/button';
-import { useActionState, useState } from 'react';
+import { useActionState, useState, startTransition, useEffect } from 'react';
 import { Label } from '../ui/label';
 import LoginSlider from './LoginSlider';
 import { Input } from '../ui/input';
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from 'next/navigation';
-import { signin } from '@/app/actions/auth';
+import { signin } from '@/app/auth/actions/signin'
 
 export default function LoginForm() {
   const [loginType, setLoginType] = useState<"tpa" | "sponsor">("tpa");
@@ -18,11 +18,27 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  // const handleSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault();
+  // Handle redirect after successful sign-in
+  useEffect(() => {
+    if (state?.redirectTo && !state?.error && !state?.errors) {
+      router.push(state.redirectTo);
+    }
+  }, [state, router]);
+  //TODO: This is all done to pass loginType with formData, try a better approach where we can directly call form action={action}
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     
-  //   // router.push('/tpa-dashboard');
-  // };
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    
+    // Add loginType to formData if needed
+    formData.set('role', loginType);
+    
+    // Call the action with the formData inside startTransition
+    startTransition(() => {
+      action(formData);
+    });
+  };
 
   return (
     <>
@@ -30,12 +46,7 @@ export default function LoginForm() {
         <Label className="text-lg text-black/50">Login as</Label>
         <LoginSlider value={loginType} onChange={setLoginType} />
       </div>
-      <form action={action} className="space-y-8">
-      {state?.error && (
-          <div className="rounded-md bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
-            {state.error}
-          </div>
-        )}
+      <form onSubmit={handleSubmit} className="space-y-8">
         <div className="space-y-2">
           <Label htmlFor="email">Email or Username</Label>
           {state?.errors?.email && (
