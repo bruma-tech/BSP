@@ -42,7 +42,7 @@ const Header = ({
 
     const sponsorNavigation = [
         { name: 'Dashboard', href: '/sponsor-dashboard', icon: 'ChartBarIcon' },
-        { name: 'Documents', href: '/document-upload', icon: 'ArrowUpTrayIcon' },
+        { name: 'Documents', href: '/sponsor-dashboard/document-upload', icon: 'ArrowUpTrayIcon' },
     ];
 
     const navigation = userRole === 'tpa' ? tpaNavigation : sponsorNavigation;
