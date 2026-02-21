@@ -11,34 +11,16 @@ import { signin } from '@/app/auth/actions/signin'
 
 export default function LoginForm() {
   const [loginType, setLoginType] = useState<"tpa" | "sponsor">("tpa");
-  // const [email, setEmail] = useState("");
-  // const [password, setPassword] = useState("");
   const [state, action, pending] = useActionState(signin, undefined)
 
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter();
 
   // Handle redirect after successful sign-in
-  useEffect(() => {
-    if (state?.redirectTo && !state?.error && !state?.errors) {
-      router.push(state.redirectTo);
-    }
-  }, [state, router]);
-  //TODO: This is all done to pass loginType with formData, try a better approach where we can directly call form action={action}
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    const form = e.currentTarget;
-    const formData = new FormData(form);
-    
-    // Add loginType to formData if needed
-    formData.set('role', loginType);
-    
-    // Call the action with the formData inside startTransition
-    startTransition(() => {
-      action(formData);
-    });
-  };
+  // The signin server action uses DAL (Data Access Layer) to determine
+  // the correct dashboard URL based on user role:
+  // - 'tpa' or 'user' role → /tpa-dashboard
+  // - 'sponsor' role → /sponsor-dashboard
+  // Pass loginType via hidden input so we can use form action={action} directly.
 
   return (
     <>
@@ -46,7 +28,8 @@ export default function LoginForm() {
         <Label className="text-lg text-black/50">Login as</Label>
         <LoginSlider value={loginType} onChange={setLoginType} />
       </div>
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form action={action} className="space-y-8">
+        <input type="hidden" name="role" value={loginType} />
         <div className="space-y-2">
           <Label htmlFor="email">Email or Username</Label>
           {state?.errors?.email && (
@@ -100,14 +83,23 @@ export default function LoginForm() {
             {state.errors.password?.join(', ')}
           </div>
         )}
+        {state?.error && (
+          <div className="rounded-md bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
+            {state.error}
+          </div>
+        )}
         <div className="flex items-center justify-end">
           <a href="#" className="text-sm text-primary hover:text-primary/80 transition-colors font-medium">
             Forgot password?
           </a>
         </div>
 
-        <Button type="submit" className="w-full h-12 text-base font-semibold flex items-center justify-center">
-          Sign In
+        <Button 
+          type="submit" 
+          disabled={pending}
+          className="w-full h-12 text-base font-semibold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {pending ? 'Signing in...' : 'Sign In'}
         </Button>
       </form>
     </>

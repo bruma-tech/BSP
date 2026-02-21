@@ -1,6 +1,10 @@
+'use server'
 import { SigninFormSchema } from '../schemas/signin'
 import type { FormState } from '../types'
-import { authClient } from '../config/client'
+import { auth } from '../config/server'
+import { getDashboardUrlByRole } from '@/app/lib/dal'
+import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 
 export async function signin(state: FormState, formData: FormData): Promise<FormState> {
   // Validate form fields
@@ -17,31 +21,27 @@ export async function signin(state: FormState, formData: FormData): Promise<Form
     }
   }
 
-  const { data, error } = await authClient.signIn.email({
-    email: validatedFields.data.email,
-    password: validatedFields.data.password,
-  })
-
-  if (error) {
-    return {
-      error: error.message,
-    }
-  }
-
-  // Determine callbackURL based on user role from signIn response
   let callbackURL = '/'
-  if (data?.user) {
-    const user = data.user as { role?: string }
+
+  try {
+    const response = await auth.api.signInEmail({
+      body: {
+        email: validatedFields.data.email,
+        password: validatedFields.data.password,
+      },
+      headers: await headers(),
+    })
+
+    // Use DAL to determine redirect URL based on user role
+    const user = response.user as { role?: string } | undefined
     const userRole = user?.role
-    if (userRole === 'tpa' || userRole === 'user') {
-      callbackURL = '/tpa-dashboard'
-    } else if (userRole === 'sponsor') {
-      callbackURL = '/sponsor-dashboard'
+    callbackURL = getDashboardUrlByRole(userRole)
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Sign in failed',
     }
   }
 
-  return {
-    data: data,
-    redirectTo: callbackURL,
-  }
+  // redirect() throws internally in Next.js, so keep it outside try-catch
+  redirect(callbackURL)
 }
