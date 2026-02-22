@@ -5,13 +5,81 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
 }
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum SponsorStatus {
+  ACTIVE
+  PENDING
+  INACTIVE
+  SUSPENDED
+}
+
+enum PlanStatus {
+  ACTIVE
+  INACTIVE
+  TERMINATED
+}
+
+enum RequirementStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+  CLOSED
+}
+
+enum RequirementPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RequirementType {
+  FINANCIAL_REPORT
+  COMPLIANCE_DOCUMENT
+  PLAN_DOCUMENT
+  AUDIT_REPORT
+  TAX_FILING
+  LEGAL_DOCUMENT
+  OTHER
+}
+
+enum ApprovalWorkflow {
+  SINGLE_REVIEWER
+  MULTI_REVIEWER
+  SEQUENTIAL
+}
+
+enum ReviewStatus {
+  OPEN
+  IN_REVIEW
+  CLOSED
+}
+
+enum DocumentStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  REVISION_REQUESTED
+}
+
+enum NotificationType {
+  NEW_REQUIREMENT
+  DEADLINE_APPROACHING
+  REVIEW_DECISION
+  FEEDBACK_RECEIVED
+}
+
+// ─── Auth Models (managed by better-auth) ────────────────────────────────────
 
 model User {
   id            String    @id
@@ -25,6 +93,13 @@ model User {
   accounts      Account[]
 
   role String @default("user")
+
+  // Virtual back-relations (no DB columns added)
+  tpa           Tpa?
+  sponsor       Sponsor?
+  documents     Document[]
+  comments      Comment[]
+  notifications Notification[]
 
   @@unique([email])
   @@map("user")
@@ -76,4 +151,206 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+// ─── Domain Models ───────────────────────────────────────────────────────────
+
+model Tpa {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationName String
+  contactNumber    String
+  address          String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  sponsors     TpaSponsor[]
+  requirements Requirement[]
+  reviews      Review[]
+
+  @@index([userId])
+  @@map("tpa")
+}
+
+model Sponsor {
+  id               String        @id @default(cuid())
+  userId           String        @unique
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationName String
+  contactNumber    String
+  address          String
+  status           SponsorStatus @default(PENDING)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  tpas                TpaSponsor[]
+  plans               Plan[]
+  requirementSponsors RequirementSponsor[]
+  reviews             Review[]
+
+  @@index([userId])
+  @@map("sponsor")
+}
+
+model TpaSponsor {
+  id        String   @id @default(cuid())
+  tpaId     String
+  tpa       Tpa      @relation(fields: [tpaId], references: [id], onDelete: Cascade)
+  sponsorId String
+  sponsor   Sponsor  @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([tpaId, sponsorId])
+  @@index([tpaId])
+  @@index([sponsorId])
+  @@map("tpa_sponsor")
+}
+
+model Plan {
+  id            String     @id @default(cuid())
+  sponsorId     String
+  sponsor       Sponsor    @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+  planName      String
+  planType      String
+  description   String?
+  effectiveDate DateTime?
+  status        PlanStatus @default(ACTIVE)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  requirements Requirement[]
+
+  @@index([sponsorId])
+  @@map("plan")
+}
+
+model Requirement {
+  id                   String              @id @default(cuid())
+  tpaId                String
+  tpa                  Tpa                 @relation(fields: [tpaId], references: [id], onDelete: Cascade)
+  planId               String
+  plan                 Plan                @relation(fields: [planId], references: [id], onDelete: Cascade)
+  title                String
+  description          String?
+  type                 RequirementType     @default(OTHER)
+  priority             RequirementPriority @default(MEDIUM)
+  rules                String?
+  policies             String?
+  documentSpecs        String?
+  approvalWorkflow     ApprovalWorkflow    @default(SINGLE_REVIEWER)
+  notifyOnSubmission   Boolean             @default(true)
+  allowResubmission    Boolean             @default(true)
+  dueDate              DateTime?
+  assignedAt           DateTime?
+  closedAt             DateTime?
+  status               RequirementStatus   @default(OPEN)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  sponsors RequirementSponsor[]
+  reviews  Review[]
+  comments Comment[]
+
+  @@index([tpaId])
+  @@index([planId])
+  @@index([status])
+  @@map("requirement")
+}
+
+model RequirementSponsor {
+  id            String      @id @default(cuid())
+  requirementId String
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  sponsorId     String
+  sponsor       Sponsor     @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@unique([requirementId, sponsorId])
+  @@index([requirementId])
+  @@index([sponsorId])
+  @@map("requirement_sponsor")
+}
+
+model Review {
+  id            String       @id @default(cuid())
+  requirementId String
+  requirement   Requirement  @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  sponsorId     String
+  sponsor       Sponsor      @relation(fields: [sponsorId], references: [id])
+  tpaId         String
+  tpa           Tpa          @relation(fields: [tpaId], references: [id])
+  status        ReviewStatus @default(OPEN)
+  submittedAt   DateTime?
+  closedAt      DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  documents Document[]
+  comments  Comment[]
+
+  @@index([requirementId])
+  @@index([sponsorId])
+  @@index([tpaId])
+  @@map("review")
+}
+
+model Document {
+  id             String         @id @default(cuid())
+  reviewId       String
+  review         Review         @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  filePath       String
+  fileName       String
+  fileSize       String?
+  fileFormat     String?
+  version        Int            @default(1)
+  description    String?
+  certifications String[]
+  effectiveDate  DateTime?
+  expirationDate DateTime?
+  status         DocumentStatus @default(PENDING_REVIEW)
+  uploadedAt     DateTime       @default(now())
+  uploadedById   String
+  uploadedBy     User           @relation(fields: [uploadedById], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([reviewId])
+  @@index([uploadedById])
+  @@map("document")
+}
+
+model Comment {
+  id               String       @id @default(cuid())
+  reviewId         String?
+  review           Review?      @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  requirementId    String?
+  requirement      Requirement? @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  authorId         String
+  author           User         @relation(fields: [authorId], references: [id])
+  content          String
+  isRevisionRequest Boolean     @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([reviewId])
+  @@index([requirementId])
+  @@index([authorId])
+  @@map("comment")
+}
+
+model Notification {
+  id             String           @id @default(cuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           NotificationType
+  title          String
+  message        String
+  actionRequired Boolean          @default(false)
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+
+  @@index([userId])
+  @@index([userId, readAt])
+  @@map("notification")
 }
