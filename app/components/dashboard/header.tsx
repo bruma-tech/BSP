@@ -6,6 +6,7 @@ import Icon from '../ui/AppIcon';
 import { wix } from '@/app/components/ui/fonts';
 import { modalBus } from "@/app/lib/modalBus";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { signout } from '@/app/auth/actions/signout'
 
 interface HeaderProps {
     userRole?: 'tpa' | 'sponsor';
@@ -205,10 +206,15 @@ const Header = ({
                                     Help
                                 </button>
                                 <div className="border-t border-border mt-2 pt-2">
-                                    <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-error hover:bg-muted transition-colors duration-fast">
-                                        <Icon name="ArrowRightOnRectangleIcon" size={18} />
-                                        Sign out
-                                    </button>
+                                <form action={signout}>
+                                        <button
+                                            type="submit"
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-error hover:bg-muted transition-colors duration-fast"
+                                        >
+                                            <Icon name="ArrowRightOnRectangleIcon" size={18} />
+                                            Sign out
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         )}
