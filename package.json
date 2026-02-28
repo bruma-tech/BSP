@@ -22,9 +22,9 @@
     "lucide-react": "^0.561.0",
     "next": "16.0.10",
     "pg": "^8.18.0",
-    "prisma": "^7.4.0",
     "react": "19.2.1",
     "react-dom": "19.2.1",
+    "swagger-ui-react": "^5.32.0",
     "tailwind-merge": "^3.4.0",
     "tsx": "^4.21.0",
     "zod": "^4.3.6"
@@ -34,8 +34,10 @@
     "@types/node": "^25.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/swagger-ui-react": "^5.18.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.10",
+    "prisma": "^7.4.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
