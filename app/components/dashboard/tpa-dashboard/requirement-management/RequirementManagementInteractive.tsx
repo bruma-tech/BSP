@@ -1,9 +1,8 @@
 'use client';
 
-import AddSponsorModal from "../sponsor-management/AddSponsorModal";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
-import CreateRequirementModal, { RequirementFormData } from './CreateRequirementModal';
+import type { RequirementFormData } from './CreateRequirementModal';
 import FilterPanel, { FilterState } from './FilterPanel'
 import RequirementTable from './RequirementTable';
 import RequirementCard from './RequirementCard';
@@ -30,6 +29,31 @@ interface Requirement {
     priority: 'low' | 'medium' | 'high';
 }
 
+// Maps Prisma enum values to the UI display values
+const statusMap: Record<string, Requirement['status']> = {
+    OPEN: 'pending',
+    IN_PROGRESS: 'in-progress',
+    COMPLETED: 'completed',
+    OVERDUE: 'overdue',
+    CLOSED: 'completed',
+};
+
+const priorityMap: Record<string, Requirement['priority']> = {
+    LOW: 'low',
+    MEDIUM: 'medium',
+    HIGH: 'high',
+};
+
+const typeMap: Record<string, string> = {
+    FINANCIAL_REPORT: 'Financial Report',
+    COMPLIANCE_DOCUMENT: 'Compliance Document',
+    PLAN_DOCUMENT: 'Plan Document',
+    AUDIT_REPORT: 'Audit Report',
+    TAX_FILING: 'Tax Filing',
+    LEGAL_DOCUMENT: 'Legal Document',
+    OTHER: 'Other',
+};
+
 const RequirementManagementInteractive = () => {
     const [isHydrated, setIsHydrated] = useState(false);
     const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
@@ -37,6 +61,7 @@ const RequirementManagementInteractive = () => {
     const [selectedRequirements, setSelectedRequirements] = useState<string[]>([]);
     const [sortColumn, setSortColumn] = useState('title');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [sponsors, setSponsors] = useState<Sponsor[]>([]);
     const [filters, setFilters] = useState<FilterState>({
         status: [],
         priority: [],
@@ -45,100 +70,53 @@ const RequirementManagementInteractive = () => {
         dateRange: { start: '', end: '' },
     });
 
-    useEffect(() => {
-        setIsHydrated(true);
+    const [requirements, setRequirements] = useState<Requirement[]>([]);
+
+    const fetchData = useCallback(async () => {
+        const [reqRes, sponsorRes] = await Promise.all([
+            fetch('/api/requirements'),
+            fetch('/api/sponsors'),
+        ]);
+
+        if (sponsorRes.ok) {
+            const sponsorData = await sponsorRes.json();
+            setSponsors(sponsorData.data ?? []);
+        }
+
+        if (reqRes.ok) {
+            const reqData = await reqRes.json();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const mapped: Requirement[] = (reqData.data ?? []).map((r: any) => ({
+                id: r.id,
+                title: r.title,
+                description: r.description ?? '',
+                type: typeMap[r.type] ?? r.type,
+                assignedSponsors: (r.sponsors ?? []).map((rs: any) => ({
+                    id: rs.sponsor.id,
+                    name: rs.sponsor.organizationName,
+                    email: rs.sponsor.user?.email ?? '',
+                })),
+                dueDate: r.dueDate
+                    ? new Date(r.dueDate).toLocaleDateString('en-US', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        year: 'numeric',
+                    })
+                    : '',
+                status: statusMap[r.status] ?? 'pending',
+                completionRate: 0,
+                totalDocuments: 0,
+                submittedDocuments: 0,
+                priority: priorityMap[r.priority] ?? 'medium',
+            }));
+            setRequirements(mapped);
+        }
     }, []);
 
-    const mockSponsors: Sponsor[] = [
-        { id: 'sp1', name: 'Acme Corporation', email: 'contact@acme.com' },
-        { id: 'sp2', name: 'Global Industries', email: 'info@globalind.com' },
-        { id: 'sp3', name: 'TechStart Solutions', email: 'hello@techstart.com' },
-        { id: 'sp4', name: 'Premier Healthcare', email: 'admin@premierhc.com' },
-        { id: 'sp5', name: 'Sunrise Financial', email: 'support@sunrisefin.com' },
-    ];
-
-    const mockRequirements: Requirement[] = [
-        {
-            id: 'req1',
-            title: 'Q4 2024 Financial Statement',
-            description: 'Submit comprehensive financial statements for the fourth quarter of 2024 including balance sheet, income statement, and cash flow analysis.',
-            type: 'Financial Report',
-            assignedSponsors: [mockSponsors[0], mockSponsors[1]],
-            dueDate: '12/31/2024',
-            status: 'in-progress',
-            completionRate: 65,
-            totalDocuments: 3,
-            submittedDocuments: 2,
-            priority: 'high',
-        },
-        {
-            id: 'req2',
-            title: 'Annual Compliance Audit Report',
-            description: 'Complete annual compliance audit documentation covering all regulatory requirements and internal policy adherence.',
-            type: 'Compliance Document',
-            assignedSponsors: [mockSponsors[2]],
-            dueDate: '01/15/2025',
-            status: 'pending',
-            completionRate: 0,
-            totalDocuments: 5,
-            submittedDocuments: 0,
-            priority: 'high',
-        },
-        {
-            id: 'req3',
-            title: 'Employee Benefits Plan Document',
-            description: 'Updated employee benefits plan documentation reflecting changes in coverage and contribution rates.',
-            type: 'Plan Document',
-            assignedSponsors: [mockSponsors[3], mockSponsors[4]],
-            dueDate: '01/30/2025',
-            status: 'in-progress',
-            completionRate: 40,
-            totalDocuments: 2,
-            submittedDocuments: 1,
-            priority: 'medium',
-        },
-        {
-            id: 'req4',
-            title: '2024 Tax Filing Documents',
-            description: 'All required tax filing documents including Form 5500, Schedule A, and supporting documentation.',
-            type: 'Tax Filing',
-            assignedSponsors: [mockSponsors[0]],
-            dueDate: '12/20/2024',
-            status: 'overdue',
-            completionRate: 30,
-            totalDocuments: 4,
-            submittedDocuments: 1,
-            priority: 'high',
-        },
-        {
-            id: 'req5',
-            title: 'Investment Policy Statement',
-            description: 'Updated investment policy statement outlining investment objectives, strategies, and guidelines.',
-            type: 'Plan Document',
-            assignedSponsors: [mockSponsors[1], mockSponsors[2]],
-            dueDate: '02/15/2025',
-            status: 'pending',
-            completionRate: 0,
-            totalDocuments: 1,
-            submittedDocuments: 0,
-            priority: 'medium',
-        },
-        {
-            id: 'req6',
-            title: 'Quarterly Performance Report',
-            description: 'Detailed quarterly performance analysis including key metrics, trends, and comparative data.',
-            type: 'Financial Report',
-            assignedSponsors: [mockSponsors[4]],
-            dueDate: '11/30/2024',
-            status: 'completed',
-            completionRate: 100,
-            totalDocuments: 2,
-            submittedDocuments: 2,
-            priority: 'low',
-        },
-    ];
-
-    const [requirements, setRequirements] = useState<Requirement[]>(mockRequirements);
+    useEffect(() => {
+        setIsHydrated(true);
+        fetchData();
+    }, [fetchData]);
 
     const filteredRequirements = requirements.filter((req) => {
         const matchesSearch =
@@ -178,9 +156,9 @@ const RequirementManagementInteractive = () => {
         inProgress: requirements.filter((r) => r.status === 'in-progress').length,
         completed: requirements.filter((r) => r.status === 'completed').length,
         overdue: requirements.filter((r) => r.status === 'overdue').length,
-        avgCompletion: Math.round(
-            requirements.reduce((sum, r) => sum + r.completionRate, 0) / requirements.length
-        ),
+        avgCompletion: requirements.length > 0
+            ? Math.round(requirements.reduce((sum, r) => sum + r.completionRate, 0) / requirements.length)
+            : 0,
     };
 
     const handleSort = (column: string) => {
@@ -206,27 +184,9 @@ const RequirementManagementInteractive = () => {
         }
     };
 
-    const handleCreateRequirement = (data: RequirementFormData) => {
-        const newRequirement: Requirement = {
-            id: `req${requirements.length + 1}`,
-            title: data.title,
-            description: data.description,
-            type: data.type,
-            assignedSponsors: mockSponsors.filter((s) => data.assignedSponsors.includes(s.id)),
-            dueDate: new Date(data.dueDate).toLocaleDateString('en-US', {
-                month: '2-digit',
-                day: '2-digit',
-                year: 'numeric',
-            }),
-            status: 'pending',
-            completionRate: 0,
-            totalDocuments: 1,
-            submittedDocuments: 0,
-            priority: data.priority,
-        };
-
-        setRequirements([newRequirement, ...requirements]);
-
+    const handleCreateRequirement = (_data: RequirementFormData) => {
+        // Re-fetch requirements to include the newly created one from the server
+        fetchData();
     };
 
     const handleEdit = (id: string) => {
@@ -360,7 +320,7 @@ const RequirementManagementInteractive = () => {
                 </div>
             </div>
 
-            <FilterPanel onFilterChange={setFilters} sponsors={mockSponsors} />
+            <FilterPanel onFilterChange={setFilters} sponsors={sponsors} />
 
             {viewMode === 'table' ? (
                 <div className="bg-card border border-border rounded-lg overflow-hidden">

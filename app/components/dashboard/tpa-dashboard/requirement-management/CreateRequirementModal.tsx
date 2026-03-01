@@ -10,14 +10,22 @@ interface Sponsor {
     email: string;
 }
 
+interface Plan {
+    id: string;
+    planName: string;
+    planType: string;
+}
+
 interface CreateRequirementModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (data: RequirementFormData) => void;
     sponsors: Sponsor[];
+    plans: Plan[];
 }
 
 export interface RequirementFormData {
+    planId: string;
     title: string;
     description: string;
     type: string;
@@ -30,8 +38,9 @@ export interface RequirementFormData {
     allowResubmission: boolean;
 }
 
-const CreateRequirementModal = ({ isOpen, onClose, onSubmit, sponsors }: CreateRequirementModalProps) => {
+const CreateRequirementModal = ({ isOpen, onClose, onSubmit, sponsors, plans }: CreateRequirementModalProps) => {
     const [formData, setFormData] = useState<RequirementFormData>({
+        planId: '',
         title: '',
         description: '',
         type: 'Financial Report',
@@ -59,6 +68,9 @@ const CreateRequirementModal = ({ isOpen, onClose, onSubmit, sponsors }: CreateR
     const validateForm = (): boolean => {
         const newErrors: Partial<Record<keyof RequirementFormData, string>> = {};
 
+        if (!formData.planId) {
+            newErrors.planId = 'Plan is required';
+        }
         if (!formData.title.trim()) {
             newErrors.title = 'Title is required';
         }
@@ -111,6 +123,7 @@ try {
     console.log("Requirement stored via Mock API");
     onSubmit(parsed.data);
     setFormData({
+        planId: '',
         title: '',
         description: '',
         type: 'Financial Report',
@@ -184,6 +197,27 @@ try {
 
                 <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-6">
                     <div className="space-y-6">
+                        <div>
+                            <label htmlFor="planId" className="block text-sm font-medium text-foreground mb-2">
+                                Plan *
+                            </label>
+                            <select
+                                id="planId"
+                                value={formData.planId}
+                                onChange={(e) => setFormData({ ...formData, planId: e.target.value })}
+                                className={`w-full px-4 py-2 rounded-md border ${errors.planId ? 'border-error' : 'border-border'
+                                    } bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary`}
+                            >
+                                <option value="">Select a plan</option>
+                                {plans.map((plan) => (
+                                    <option key={plan.id} value={plan.id}>
+                                        {plan.planName} ({plan.planType})
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.planId && <p className="text-sm text-error mt-1">{errors.planId}</p>}
+                        </div>
+
                         <div>
                             <label htmlFor="title" className="block text-sm font-medium text-foreground mb-2">
                                 Requirement Title *

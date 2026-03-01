@@ -2,12 +2,7 @@ import { NextResponse } from "next/server";
 import { requirementSchema } from "@/lib/validation/requirementSchema";
 import { verifySession } from "@/app/lib/dal";
 import prisma from "@/app/lib/prisma";
-import type {
-  RequirementType,
-  RequirementPriority,
-  ApprovalWorkflow,
-} from "@/src/generated/prisma";
-
+import type { RequirementType, RequirementPriority, ApprovalWorkflow } from "@/src/generated/prisma/enums";
 // Maps form display values to Prisma enum values
 const typeMap: Record<string, RequirementType> = {
   "Financial Report": "FINANCIAL_REPORT",
@@ -73,7 +68,11 @@ export async function GET() {
         sponsors: {
           include: {
             sponsor: {
-              select: { id: true, organizationName: true },
+              select: {
+                id: true,
+                organizationName: true,
+                user: { select: { email: true } },
+              },
             },
           },
         },
