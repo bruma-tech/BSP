@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 export const requirementSchema = z.object({
+  planId: z.string().min(1, "Plan is required"),
+
   title: z.string().trim().min(1, "Requirement title is required"),
 
   description: z
@@ -14,18 +16,18 @@ export const requirementSchema = z.object({
 
   dueDate: z.string().refine((date) => {
     if (!date) return false;
-  
+
     const selected = new Date(date);
     const today = new Date();
-  
+
     today.setHours(0, 0, 0, 0);
     selected.setHours(0, 0, 0, 0);
-  
+
     return selected >= today;
   }, {
     message: "Due date cannot be in the past",
   }),
-  
+
 
   assignedSponsors: z
     .array(z.string())
