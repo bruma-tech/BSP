@@ -6,8 +6,6 @@ import SponsorStats from './SponsorStats';
 import SponsorTableRow from './SponsorTableRow';
 import SponsorDetailModal from './SponsorDetailModal';
 import AddSponsorModal from './AddSponsorModal';
-// import SponsorDetailModal from './SponsorDetailModal';
-// import AddSponsorModal from './AddSponsorModal';
 
 interface Sponsor {
     id: number;
