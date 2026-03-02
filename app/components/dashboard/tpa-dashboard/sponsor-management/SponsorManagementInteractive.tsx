@@ -323,7 +323,8 @@ export default function SponsorManagementInteractive() {
 
                             <button
                                 onClick={() => setIsAddModalOpen(true)}
-                                className="flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-fast"
+                                disabled={true}
+                                className="flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-fast disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Icon name="PlusIcon" size={20} />
                                 Add Sponsor

@@ -50,11 +50,11 @@ const Header = ({
 
     const quickActions = userRole === 'tpa'
         ? [
-            { name: 'Create Requirement', icon: 'PlusCircleIcon', action: () => modalBus.open("requirement") },
-            { name: 'Add Sponsor', icon: 'UserPlusIcon', action: () => modalBus.open("sponsor") },
+            { name: 'Create Requirement', icon: 'PlusCircleIcon', action: () => modalBus.open("requirement"), disabled:false},
+            { name: 'Add Sponsor', icon: 'UserPlusIcon', action: () => modalBus.open("sponsor"), disabled:true},
         ]
         : [
-            { name: 'Upload Document', icon: 'ArrowUpTrayIcon', action: () => console.log('Upload Document') },
+            { name: 'Upload Document', icon: 'ArrowUpTrayIcon', action: () => console.log('Upload Document'), disabled:false},
         ];
 
     const notifications = [
@@ -116,11 +116,16 @@ const Header = ({
                                 {quickActions.map((action) => (
                                     <button
                                         key={action.name}
+                                        disabled={action.disabled}
                                         onClick={() => {
+                                            if (action.disabled) return;
                                             action.action();
                                             setIsQuickActionOpen(false);
                                         }}
-                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors duration-fast"
+                                        className={
+                                            "w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground transition-colors duration-fast" +
+                                            (action.disabled ? " opacity-50 cursor-not-allowed" : " hover:bg-muted cursor-pointer")
+                                        }
                                     >
                                         <Icon name={action.icon as any} size={18} />
                                         {action.name}

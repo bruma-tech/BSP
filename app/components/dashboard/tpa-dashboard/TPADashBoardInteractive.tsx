@@ -214,7 +214,8 @@ const TPADashboardInteractive = () => {
                                 icon="UserPlusIcon"
                                 label="Add New Sponsor"
                                 description="Onboard a new sponsor entity"
-                                onClick={() => handleQuickAction('add-sponsor')}
+                                onClick={() => handleQuickAction('add-sponsor')} 
+                                disabled  
                             />
                             <QuickActionButton
                                 icon="DocumentPlusIcon"
