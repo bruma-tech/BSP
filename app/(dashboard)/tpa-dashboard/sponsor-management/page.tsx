@@ -10,9 +10,7 @@ export const metadata: Metadata = {
 
 export default function SponsorManagementPage() {
     return (
-        <div className="min-h-screen bg-background">
-            <Header userRole="tpa" userName="TPA Admin" notificationCount={3} />
-
+        <div className="min-h-screen bg-background">     
             <main className="">
                 <div className="max-w-2/3 mx-auto px-6 py-8">
                     <div className="mb-8">
