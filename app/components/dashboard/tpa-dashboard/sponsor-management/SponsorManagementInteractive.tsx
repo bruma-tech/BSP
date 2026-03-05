@@ -30,7 +30,8 @@ interface NewSponsor {
 }
 
 export default function SponsorManagementInteractive() {
-    const [isHydrated, setIsHydrated] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [sponsors, setSponsors] = useState<Sponsor[]>([]);
     const [filteredSponsors, setFilteredSponsors] = useState<Sponsor[]>([]);
     const [selectedSponsors, setSelectedSponsors] = useState<number[]>([]);
@@ -43,121 +44,23 @@ export default function SponsorManagementInteractive() {
     const [bulkAction, setBulkAction] = useState('');
 
     useEffect(() => {
-        setIsHydrated(true);
-
-        const mockSponsors: Sponsor[] = [
-            {
-                id: 1,
-                name: 'Acme Corporation',
-                status: 'active',
-                planCount: 3,
-                activeRequirements: 5,
-                lastActivity: '12/15/2024',
-                contactEmail: 'contact@acmecorp.com',
-                contactPhone: '(555) 123-4567',
-                address: '123 Business Ave, New York, NY 10001',
-                registrationDate: '01/15/2024',
-                completionRate: 92
-            },
-            {
-                id: 2,
-                name: 'Global Industries Inc',
-                status: 'active',
-                planCount: 5,
-                activeRequirements: 8,
-                lastActivity: '12/14/2024',
-                contactEmail: 'info@globalind.com',
-                contactPhone: '(555) 234-5678',
-                address: '456 Corporate Blvd, Chicago, IL 60601',
-                registrationDate: '02/20/2024',
-                completionRate: 88
-            },
-            {
-                id: 3,
-                name: 'TechStart Solutions',
-                status: 'pending',
-                planCount: 1,
-                activeRequirements: 2,
-                lastActivity: '12/10/2024',
-                contactEmail: 'admin@techstart.com',
-                contactPhone: '(555) 345-6789',
-                address: '789 Innovation Dr, San Francisco, CA 94102',
-                registrationDate: '12/01/2024',
-                completionRate: 45
-            },
-            {
-                id: 4,
-                name: 'Healthcare Partners LLC',
-                status: 'active',
-                planCount: 4,
-                activeRequirements: 6,
-                lastActivity: '12/13/2024',
-                contactEmail: 'contact@healthpartners.com',
-                contactPhone: '(555) 456-7890',
-                address: '321 Medical Plaza, Boston, MA 02101',
-                registrationDate: '03/10/2024',
-                completionRate: 95
-            },
-            {
-                id: 5,
-                name: 'Manufacturing Co',
-                status: 'inactive',
-                planCount: 2,
-                activeRequirements: 0,
-                lastActivity: '11/20/2024',
-                contactEmail: 'info@mfgco.com',
-                contactPhone: '(555) 567-8901',
-                address: '654 Industrial Way, Detroit, MI 48201',
-                registrationDate: '01/05/2024',
-                completionRate: 78
-            },
-            {
-                id: 6,
-                name: 'Retail Group International',
-                status: 'active',
-                planCount: 6,
-                activeRequirements: 10,
-                lastActivity: '12/16/2024',
-                contactEmail: 'contact@retailgroup.com',
-                contactPhone: '(555) 678-9012',
-                address: '987 Commerce St, Los Angeles, CA 90001',
-                registrationDate: '02/15/2024',
-                completionRate: 90
-            },
-            {
-                id: 7,
-                name: 'Financial Services Corp',
-                status: 'active',
-                planCount: 7,
-                activeRequirements: 12,
-                lastActivity: '12/15/2024',
-                contactEmail: 'admin@finservices.com',
-                contactPhone: '(555) 789-0123',
-                address: '147 Wall Street, New York, NY 10005',
-                registrationDate: '01/20/2024',
-                completionRate: 94
-            },
-            {
-                id: 8,
-                name: 'Education Foundation',
-                status: 'pending',
-                planCount: 2,
-                activeRequirements: 3,
-                lastActivity: '12/12/2024',
-                contactEmail: 'info@edufoundation.org',
-                contactPhone: '(555) 890-1234',
-                address: '258 Campus Drive, Austin, TX 78701',
-                registrationDate: '11/25/2024',
-                completionRate: 60
+        async function fetchSponsors() {
+            try {
+                const res = await fetch('/api/sponsors');
+                const json = await res.json();
+                if (!res.ok || !json.success) throw new Error(json.message ?? 'Failed to fetch sponsors');
+                setSponsors(json.data);
+                setFilteredSponsors(json.data);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Something went wrong');
+            } finally {
+                setIsLoading(false);
             }
-        ];
-
-        setSponsors(mockSponsors);
-        setFilteredSponsors(mockSponsors);
+        }
+        fetchSponsors();
     }, []);
 
     useEffect(() => {
-        if (!isHydrated) return;
 
         let result = [...sponsors];
 
@@ -190,9 +93,9 @@ export default function SponsorManagementInteractive() {
         });
 
         setFilteredSponsors(result);
-    }, [searchQuery, statusFilter, sortField, sortDirection, sponsors, isHydrated]);
+    }, [searchQuery, statusFilter, sortField, sortDirection, sponsors]);
 
-    if (!isHydrated) {
+    if (isLoading) {
         return (
             <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -207,6 +110,14 @@ export default function SponsorManagementInteractive() {
                 <div className="bg-card border border-border rounded-lg p-6">
                     <div className="h-64 bg-muted rounded animate-pulse" />
                 </div>
+            </div>
+        );
+    }
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+                <Icon name="ExclamationCircleIcon" size={48} className="text-error" />
+                <p className="text-muted-foreground">{error}</p>
             </div>
         );
     }

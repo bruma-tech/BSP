@@ -42,68 +42,58 @@ export async function GET() {
         sponsor: {
           include: {
             user: { select: { name: true, email: true } },
+            plans: { where: { status: "ACTIVE" }, select: { id: true } },
+            requirementSponsors: {
+              include: {
+                requirement: { select: { status: true } },
+              },
           },
         },
       },
+    },
     });
 
-    const sponsors = tpaSponsors.map((ts) => ({
-      id: ts.sponsor.id,
-      name: ts.sponsor.organizationName,
-      email: ts.sponsor.user.email,
-    }));
+    const sponsors = tpaSponsors.map((ts) => {
+      const s = ts.sponsor;
+      const activeRequirements = s.requirementSponsors.filter(
+        (rs) => rs.requirement.status === "OPEN" || rs.requirement.status === "IN_PROGRESS"
+      ).length;
+
+      return {
+        id: s.id,
+        name: s.organizationName,
+        status: s.status.toLowerCase() as "active" | "pending" | "inactive" | "suspended",
+        planCount: s.plans.length,
+        activeRequirements,
+        pendingItems: activeRequirements,
+        lastActivity: s.updatedAt.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }),
+        registrationDate: s.createdAt.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }),
+        contactEmail: s.user.email,
+        contactPhone: s.contactNumber,
+        address: s.address,
+        completionRate: 0,
+      };
+    });
 
     return NextResponse.json({ success: true, data: sponsors });
   } catch (error) {
     console.error("GET /api/sponsors error:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch sponsors" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: "Failed to fetch sponsors" }, { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
   try {
-    console.log("\n========== SPONSOR API HIT ==========");
     const body = await req.json();
-    console.log("RAW BODY TYPE:", typeof body);
-    console.log("RAW BODY:", body);
-    console.log("FIELDS:", Object.keys(body));
-    
     const result = sponsorSchema.safeParse(body);
+
     if (!result.success) {
-      console.log("Sponsor Validation Failed");
-
-      const errors = result.error.issues.map((err) => ({
-        field: err.path[0],
-        message: err.message,
-      }));
-      console.log(errors);
-
-      return NextResponse.json(
-        {
-          success: false,
-          errors,
-        },
-        { status: 400 }
-      );
+      const errors = result.error.issues.map((err) => ({ field: err.path[0], message: err.message }));
+      return NextResponse.json({ success: false, errors }, { status: 400 });
     }
-    console.log("Sponsor Validation Passed");
-    console.log("Clean Sponsor:", result.data);
 
-    return NextResponse.json({
-      success: true,
-      data: result.data,
-      message: "Sponsor stored successfully (mock)",
-    });
-
+    return NextResponse.json({ success: true, data: result.data, message: "Sponsor stored successfully (mock)" });
   } catch (error) {
-    console.log("Server Error:", error);
-
-    return NextResponse.json(
-      { success: false, message: "Invalid JSON body" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: "Invalid JSON body" }, { status: 500 });
   }
 }
