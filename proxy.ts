@@ -9,7 +9,7 @@ interface RouteConfig {
 
 const SESSION_COOKIE = 'better-auth.session_token'
 
-const PUBLIC_ROUTES = ['/', '/api/auth']
+const PUBLIC_ROUTES = ['/', '/api/auth', '/403']
 
 const PROTECTED_ROUTES: RouteConfig[] = [
   { pattern: '/tpa-dashboard', allowedRoles: ['tpa', 'user'] },
@@ -57,12 +57,6 @@ async function getSessionUser(req: NextRequest): Promise<{ id: string; role: Use
   }
 }
 
-function redirectWith(base: string | URL, path: string, message: string): NextResponse {
-  const url = new URL(path, base)
-  url.searchParams.set('unauthorized', message)
-  return NextResponse.redirect(url)
-}
-
 export async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl
 
@@ -76,11 +70,9 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     return NextResponse.next()
   }
 
-  return redirectWith(
-    req.url,
-    getDashboardByRole(user.role),
-    `You don't have permission to access this page.`
-  )
+  const url = new URL(getDashboardByRole(user.role), req.url)
+  url.searchParams.set('error', 'unauthorized')
+  return NextResponse.redirect(url)
 }
 
 export const config = {
