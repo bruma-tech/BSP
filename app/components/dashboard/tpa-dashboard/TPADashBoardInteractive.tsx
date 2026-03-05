@@ -141,7 +141,7 @@ const TPADashboardInteractive = () => {
     ];
 
     const handleQuickAction = (action: string) => {
-        if (action === "add-sponsor") modalBus.open("sponsor");
+        ///if (action === "add-sponsor") modalBus.open("sponsor"); //For enable/disable add sposnor btn in home page of tpa-dashboard
         if (action === "create-requirement") modalBus.open("requirement");
     };
     
