@@ -1,7 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getRouteConfig, isPublicRoute, getDashboardByRole, type UserRole } from '@/app/lib/routeConfig'
+
+type UserRole = 'tpa' | 'sponsor' | 'user'
+
+interface RouteConfig {
+  pattern: string
+  allowedRoles: UserRole[]
+}
 
 const SESSION_COOKIE = 'better-auth.session_token'
+
+const PUBLIC_ROUTES = ['/', '/api/auth']
+
+const PROTECTED_ROUTES: RouteConfig[] = [
+  { pattern: '/tpa-dashboard', allowedRoles: ['tpa', 'user'] },
+  { pattern: '/tpa-dashboard/sponsor-management', allowedRoles: ['tpa', 'user'] },
+  { pattern: '/tpa-dashboard/requirement-management', allowedRoles: ['tpa', 'user'] },
+  { pattern: '/tpa-dashboard/document-review', allowedRoles: ['tpa', 'user'] },
+  { pattern: '/sponsor-dashboard', allowedRoles: ['sponsor'] },
+  { pattern: '/sponsor-dashboard/document-upload', allowedRoles: ['sponsor'] },
+]
+
+function isPublicRoute(pathname: string): boolean {
+  return PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(p + '/'))
+}
+
+function getRouteConfig(pathname: string): RouteConfig | null {
+  const matches = PROTECTED_ROUTES.filter(
+    (r) => pathname === r.pattern || pathname.startsWith(r.pattern + '/')
+  )
+  if (!matches.length) return null
+  return matches.reduce((best, cur) => (cur.pattern.length > best.pattern.length ? cur : best))
+}
+
+function getDashboardByRole(role: UserRole | string): string {
+  if (role === 'sponsor') return '/sponsor-dashboard'
+  if (role === 'tpa' || role === 'user') return '/tpa-dashboard'
+  return '/'
+}
 
 async function getSessionUser(req: NextRequest): Promise<{ id: string; role: UserRole } | null> {
   try {
@@ -34,13 +69,7 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
   if (isPublicRoute(pathname)) return NextResponse.next()
 
   const user = await getSessionUser(req)
-
-  if (!user) {
-    const msg = req.cookies.get(SESSION_COOKIE)?.value
-      ? 'Your session has expired. Please sign in again.'
-      : 'Please sign in to continue.'
-    return redirectWith(req.url, '/', msg)
-  }
+  if (!user) return NextResponse.redirect(new URL('/', req.url))
 
   const route = getRouteConfig(pathname)
   if (!route || !route.allowedRoles.length || route.allowedRoles.includes(user.role)) {
@@ -50,7 +79,7 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
   return redirectWith(
     req.url,
     getDashboardByRole(user.role),
-    `You don't have permission to access ${route.label}. This area is restricted to ${route.allowedRoles.join(' or ')} users.`
+    `You don't have permission to access this page.`
   )
 }
 
