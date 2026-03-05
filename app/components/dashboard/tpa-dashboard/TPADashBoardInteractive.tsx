@@ -38,20 +38,34 @@ interface Sponsor {
 }
 
 const TPADashboardInteractive = () => {
-    const [isHydrated, setIsHydrated] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [sponsors, setSponsors] = useState<Sponsor[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'inactive'>('all');
     const [sortBy, setSortBy] = useState<'name' | 'pending' | 'activity'>('name');
 
     useEffect(() => {
-        setIsHydrated(true);
+        async function fetchSponsors() {
+            try {
+                const res = await fetch('/api/sponsors');
+                const json = await res.json();
+                if (res.ok && json.success) {
+                    setSponsors(json.data);
+                }
+            } catch {
+                // fail silently — table shows empty state
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        fetchSponsors();
     }, []);
 
     const metrics: Metric[] = [
         {
             id: '1',
             title: 'Total Sponsors',
-            value: 8,
+            value: sponsors.length,
             change: '+12% from last month',
             changeType: 'positive',
             icon: 'M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z',
@@ -129,16 +143,6 @@ const TPADashboardInteractive = () => {
         }
     ];
 
-    const sponsors: Sponsor[] = [
-        { id: 1, name: 'Acme Corporation', planCount: 3, pendingItems: 5, lastActivity: '5 minutes ago', status: 'active' },
-        { id: 2, name: 'Global Enterprises', planCount: 2, pendingItems: 0, lastActivity: '1 hour ago', status: 'active' },
-        { id: 3, name: 'Tech Solutions Inc', planCount: 4, pendingItems: 8, lastActivity: '2 hours ago', status: 'active' },
-        { id: 4, name: 'Healthcare Partners', planCount: 1, pendingItems: 3, lastActivity: '3 hours ago', status: 'pending' },
-        { id: 5, name: 'Finance Group LLC', planCount: 2, pendingItems: 2, lastActivity: '4 hours ago', status: 'active' },
-        { id: 6, name: 'Retail Ventures', planCount: 3, pendingItems: 0, lastActivity: '1 day ago', status: 'active' },
-        { id: 7, name: 'Manufacturing Co', planCount: 1, pendingItems: 12, lastActivity: '2 days ago', status: 'pending' },
-        { id: 8, name: 'Education Trust', planCount: 2, pendingItems: 0, lastActivity: '3 days ago', status: 'inactive' }
-    ];
 
     const handleQuickAction = (action: string) => {
         if (action === "add-sponsor") modalBus.open("sponsor");
@@ -161,7 +165,7 @@ const TPADashboardInteractive = () => {
             return 0;
         });
 
-    if (!isHydrated) {
+    if (isLoading) {
         return (
             <div className="min-h-screen bg-background pt-16">
                 <div className="max-w-7xl mx-auto px-6 py-8">
