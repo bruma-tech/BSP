@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Icon from '@/app/components/ui/AppIcon';
 
 
@@ -23,6 +24,7 @@ interface RequirementCardProps {
 }
 
 const RequirementCard = ({ requirement, onUpload, onViewDetails, onViewHistory }: RequirementCardProps) => {
+  const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getStatusConfig = (status: string) => {
@@ -53,7 +55,10 @@ const RequirementCard = ({ requirement, onUpload, onViewDetails, onViewHistory }
       <div className="flex items-start justify-between gap-4 mb-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-lg font-semibold text-foreground truncate">{requirement.title}</h3>
+            <h3
+              className="text-lg font-semibold text-foreground truncate cursor-pointer hover:text-primary transition-colors duration-200"
+              onClick={() => router.push(`/sponsor-dashboard/document-review?requirementId=${requirement.id}`)}
+            >{requirement.title}</h3>
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${priorityConfig.bg} ${priorityConfig.text}`}>
               {priorityConfig.label}
             </span>

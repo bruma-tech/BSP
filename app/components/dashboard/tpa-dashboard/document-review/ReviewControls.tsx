@@ -5,7 +5,7 @@ import Icon from "@/app/components/ui/AppIcon";
 
 interface ReviewControlsProps {
     documentId: string;
-    onReview: (decision: 'accept' | 'reject', comment: string) => void;
+    onReview: (decision: 'accept' | 'reject', comment: string) => void | Promise<void>;
 }
 
 const ReviewControls = ({ documentId, onReview }: ReviewControlsProps) => {
@@ -13,27 +13,29 @@ const ReviewControls = ({ documentId, onReview }: ReviewControlsProps) => {
     const [showRejectForm, setShowRejectForm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleAccept = () => {
+    const handleAccept = async () => {
         setIsSubmitting(true);
-        setTimeout(() => {
-            onReview('accept', comment);
+        try {
+            await onReview('accept', comment);
             setComment('');
+        } finally {
             setIsSubmitting(false);
-        }, 1000);
+        }
     };
 
-    const handleReject = () => {
+    const handleReject = async () => {
         if (!comment.trim()) {
             alert('Please provide a reason for rejection');
             return;
         }
         setIsSubmitting(true);
-        setTimeout(() => {
-            onReview('reject', comment);
+        try {
+            await onReview('reject', comment);
             setComment('');
             setShowRejectForm(false);
+        } finally {
             setIsSubmitting(false);
-        }, 1000);
+        }
     };
 
     return (

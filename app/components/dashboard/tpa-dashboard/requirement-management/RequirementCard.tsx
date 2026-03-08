@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Icon from '@/app/components/ui/AppIcon';
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 
@@ -38,6 +39,7 @@ const RequirementCard = ({
     onSendReminder,
     onDelete,
 }: RequirementCardProps) => {
+    const router = useRouter();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEscapeKey(isMenuOpen, () => setIsMenuOpen(false));
@@ -69,7 +71,10 @@ const RequirementCard = ({
         <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
             <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-semibold text-foreground mb-1 truncate">
+                    <h3
+                        className="text-base font-semibold text-foreground mb-1 truncate cursor-pointer hover:text-primary transition-colors duration-200"
+                        onClick={() => router.push(`/tpa-dashboard/document-review?requirementId=${requirement.id}`)}
+                    >
                         {requirement.title}
                     </h3>
                     <p className="text-sm text-muted-foreground line-clamp-2">
