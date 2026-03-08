@@ -49,118 +49,57 @@ interface Notification {
 }
 
 const SponsorDashboardInteractive = () => {
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [filteredRequirements, setFilteredRequirements] = useState<Requirement[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
+
   useEffect(() => {
-    setIsHydrated(true);
+    async function fetchRequirements() {
+      try {
+        const res = await fetch('/api/requirements');
+        const json = await res.json();
+        if (res.ok && json.success) {
+          setRequirements(json.data);
+          setFilteredRequirements(json.data);
+
+          // Auto-generate notifications from real data
+          const notifs: Notification[] = [];
+          json.data.forEach((r: Requirement, i: number) => {
+            if (r.status === 'overdue') {
+              notifs.push({
+                id: `notif-overdue-${r.id}`,
+                type: 'deadline_approaching',
+                title: 'Overdue Requirement',
+                message: `"${r.title}" is overdue. Please submit immediately.`,
+                timestamp: 'Recently',
+                actionRequired: true,
+              });
+            }
+            if (r.status === 'rejected') {
+              notifs.push({
+                id: `notif-rejected-${r.id}`,
+                type: 'review_decision',
+                title: 'Document Rejected',
+                message: `"${r.title}" has been rejected. Review feedback and resubmit.`,
+                timestamp: 'Recently',
+                actionRequired: true,
+              });
+            }
+          });
+          setNotifications(notifs.slice(0, 3));
+        }
+      } catch {
+        // fail silently — empty state shown
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchRequirements();
   }, []);
 
-  useEffect(() => {
-    if (isHydrated) {
-      const mockRequirements: Requirement[] = [
-        {
-          id: 'req-001',
-          title: 'Q4 2024 Financial Statement',
-          description: 'Submit comprehensive financial statement including balance sheet, income statement, and cash flow analysis for Q4 2024 fiscal period.',
-          dueDate: '12/20/2024',
-          status: 'overdue',
-          priority: 'high',
-          documentType: 'Financial Statement',
-          attachments: 0
-        },
-        {
-          id: 'req-002',
-          title: 'Annual Compliance Report 2024',
-          description: 'Complete annual compliance documentation covering regulatory requirements, internal audits, and policy adherence for calendar year 2024.',
-          dueDate: '12/25/2024',
-          status: 'pending',
-          priority: 'high',
-          documentType: 'Compliance Report',
-          attachments: 0
-        },
-        {
-          id: 'req-003',
-          title: 'Employee Benefits Summary',
-          description: 'Provide detailed summary of employee benefits program including health insurance, retirement plans, and additional perks offered.',
-          dueDate: '12/18/2024',
-          status: 'submitted',
-          priority: 'medium',
-          documentType: 'Annual Report',
-          submittedDate: '12/15/2024',
-          attachments: 3
-        },
-        {
-          id: 'req-004',
-          title: 'Tax Documentation 2024',
-          description: 'Submit all required tax documentation including W-2 forms, 1099 forms, and corporate tax returns for fiscal year 2024.',
-          dueDate: '01/15/2025',
-          status: 'rejected',
-          priority: 'high',
-          documentType: 'Tax Document',
-          submittedDate: '12/10/2024',
-          reviewFeedback: 'Missing signature on page 3 of the corporate tax return. Please resubmit with authorized signature.',
-          attachments: 2
-        },
-        {
-          id: 'req-005',
-          title: 'Insurance Policy Verification',
-          description: 'Verify and submit current insurance policy documents including general liability, professional liability, and workers compensation coverage.',
-          dueDate: '01/30/2025',
-          status: 'approved',
-          priority: 'low',
-          documentType: 'Compliance Report',
-          submittedDate: '12/05/2024',
-          attachments: 4
-        },
-        {
-          id: 'req-006',
-          title: 'Vendor Contract Renewals',
-          description: 'Submit renewed vendor contracts for all major service providers including IT services, facility management, and professional services.',
-          dueDate: '02/10/2025',
-          status: 'pending',
-          priority: 'medium',
-          documentType: 'Annual Report',
-          attachments: 0
-        }
-      ];
-
-      const mockNotifications: Notification[] = [
-        {
-          id: 'notif-001',
-          type: 'deadline_approaching',
-          title: 'Deadline Approaching',
-          message: 'Q4 2024 Financial Statement is overdue. Please submit immediately to avoid penalties.',
-          timestamp: '2 hours ago',
-          actionRequired: true
-        },
-        {
-          id: 'notif-002',
-          type: 'review_decision',
-          title: 'Document Rejected',
-          message: 'Tax Documentation 2024 has been rejected. Review feedback and resubmit with corrections.',
-          timestamp: '5 hours ago',
-          actionRequired: true
-        },
-        {
-          id: 'notif-003',
-          type: 'new_requirement',
-          title: 'New Requirement Added',
-          message: 'Vendor Contract Renewals requirement has been assigned to your account.',
-          timestamp: '1 day ago',
-          actionRequired: false
-        }
-      ];
-
-      setRequirements(mockRequirements);
-      setFilteredRequirements(mockRequirements);
-      setNotifications(mockNotifications);
-    }
-  }, [isHydrated]);
-
-  if (!isHydrated) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background pt-16">
         <div className="max-w-7xl mx-auto px-6 py-8">
@@ -194,7 +133,7 @@ const SponsorDashboardInteractive = () => {
     .filter(r => r.status !== 'approved')
     .map(r => {
       const dueDate = new Date(r.dueDate);
-      const today = new Date('2024-12-16');
+      const today = new Date();
       const daysRemaining = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       return {
         id: r.id,

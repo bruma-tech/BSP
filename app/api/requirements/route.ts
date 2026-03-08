@@ -39,25 +39,17 @@ export async function GET() {
       { status: 401 }
     );
   }
+  try{
 
-  if (user.role !== "tpa") {
-    return NextResponse.json(
-      { success: false, message: "Only TPA users can access requirements" },
-      { status: 403 }
-    );
-  }
+    if (user.role === "tpa") {
+      const tpa = await prisma.tpa.findUnique({ where: { userId: user.id } });
 
-  try {
-    const tpa = await prisma.tpa.findUnique({
-      where: { userId: user.id },
-    });
-
-    if (!tpa) {
-      return NextResponse.json(
-        { success: false, message: "TPA profile not found" },
-        { status: 404 }
-      );
-    }
+      if (!tpa) {
+        return NextResponse.json(
+          { success: false, message: "TPA profile not found" },
+          { status: 404 }
+        );
+      }
 
     const requirements = await prisma.requirement.findMany({
       where: { tpaId: tpa.id },
@@ -81,15 +73,88 @@ export async function GET() {
     });
 
     return NextResponse.json({ success: true, data: requirements });
-  } catch (error) {
-    console.error("GET /api/requirements error:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch requirements" },
-      { status: 500 }
-    );
   }
+
+  if (user.role === "sponsor") {
+    const sponsor = await prisma.sponsor.findUnique({ where: { userId: user.id } });
+
+    if (!sponsor) {
+      return NextResponse.json(
+        { success: false, message: "Sponsor profile not found" },
+        { status: 404 }
+      );
+    }
+
+    const now = new Date();
+
+    const requirementSponsors = await prisma.requirementSponsor.findMany({
+      where: { sponsorId: sponsor.id },
+      include: {
+        requirement: {
+          include: {
+            plan: { select: { id: true, planName: true, planType: true } },
+            tpa: { include: { user: { select: { name: true } } } },
+          },
+        },
+      },
+      orderBy: { requirement: { dueDate: "asc" } },
+    });
+
+    const requirements = requirementSponsors.map(({ requirement: r }) => {
+      const isOverdue =
+        r.dueDate &&
+        new Date(r.dueDate) < now &&
+        r.status !== "COMPLETED" &&
+        r.status !== "CLOSED";
+
+      return {
+        id: r.id,
+        title: r.title,
+        description: r.description ?? "",
+        type: r.type,
+        priority: r.priority.toLowerCase() as "high" | "medium" | "low",
+        status: isOverdue ? "overdue" : mapStatus(r.status),
+        dueDate: r.dueDate
+          ? r.dueDate.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" })
+          : null,
+        dueDateRaw: r.dueDate ?? null,
+        documentType: formatType(r.type),
+        planName: r.plan?.planName ?? null,
+        tpaName: r.tpa?.user?.name ?? null,
+        allowResubmission: r.allowResubmission,
+      };
+    });
+
+    return NextResponse.json({ success: true, data: requirements });
+  }
+
+  return NextResponse.json(
+    { success: false, message: "Unauthorized role" },
+    { status: 403 }
+  );
+} catch (error) {
+  const message = error instanceof Error ? error.message : "Failed to fetch requirements";
+  console.error("GET /api/requirements error:", error);
+  return NextResponse.json(
+    { success: false, message },
+    { status: 500 }
+  );
+}
+}
+function mapStatus(status: string): "pending" | "submitted" | "approved" | "rejected" | "overdue" {
+const map: Record<string, "pending" | "submitted" | "approved" | "rejected" | "overdue"> = {
+  OPEN: "pending",
+  IN_PROGRESS: "submitted",
+  COMPLETED: "approved",
+  OVERDUE: "overdue",
+  CLOSED: "approved",
+};
+return map[status] ?? "pending";
 }
 
+function formatType(type: string) {
+return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 /**
  * POST /api/requirements
  * Create a new requirement as the authenticated TPA.
