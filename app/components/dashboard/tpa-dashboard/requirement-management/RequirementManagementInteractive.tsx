@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Icon from '@/app/components/ui/AppIcon';
 import type { RequirementFormData } from './CreateRequirementModal';
 import FilterPanel, { FilterState } from './FilterPanel'
@@ -55,6 +56,7 @@ const typeMap: Record<string, string> = {
 };
 
 const RequirementManagementInteractive = () => {
+    const router = useRouter();
     const [isHydrated, setIsHydrated] = useState(false);
     const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
     const [searchQuery, setSearchQuery] = useState('');
@@ -194,7 +196,7 @@ const RequirementManagementInteractive = () => {
     };
 
     const handleViewSubmissions = (id: string) => {
-        console.log('View submissions for:', id);
+        router.push(`/tpa-dashboard/document-review?requirementId=${id}`);
     };
 
     const handleSendReminder = (id: string) => {

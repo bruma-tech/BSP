@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Icon from "@/app/components/ui/AppIcon";
 import { commentSchema, CommentFormData } from "@/lib/validation/commentSchema";
-import { ZodError } from "zod";
 
 interface Comment {
     id: string;
@@ -17,20 +16,25 @@ interface Comment {
 interface CommentSystemProps {
     comments: Comment[];
     onAddComment: (content: string, isRevisionRequest: boolean) => void;
+    showRevisionCheckbox?: boolean;
+    reviewId?: string;
+    requirementId?: string;
 }
 
-const CommentSystem = ({ comments, onAddComment }: CommentSystemProps) => {
+const CommentSystem = ({ comments, onAddComment, showRevisionCheckbox = true, reviewId, requirementId }: CommentSystemProps) => {
 
     const [newComment, setNewComment] = useState('');
     const [isRevisionRequest, setIsRevisionRequest] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = async () => {
-        
+
         console.log("Comment Submit Clicked");
         const formData: CommentFormData = {
             content: newComment,
             isRevisionRequest: isRevisionRequest,
+            reviewId,
+            requirementId,
         };
         const result = commentSchema.safeParse(formData);
         if (!result.success) {
@@ -40,7 +44,7 @@ const CommentSystem = ({ comments, onAddComment }: CommentSystemProps) => {
             setError(message);
             return;
         }
-    
+
         console.log("Client Validation Passed");
         setError(null);
         try {
@@ -61,12 +65,12 @@ const CommentSystem = ({ comments, onAddComment }: CommentSystemProps) => {
             onAddComment(result.data.content, result.data.isRevisionRequest);
             setNewComment('');
             setIsRevisionRequest(false);
-    
+
         } catch (error) {
             console.log("Network error:", error);
         }
     };
-    
+
     return (
         <div className="bg-card rounded-lg border border-border p-6 space-y-4">
             <h3 className="text-lg font-semibold text-foreground">Comments & Feedback</h3>
@@ -121,18 +125,20 @@ const CommentSystem = ({ comments, onAddComment }: CommentSystemProps) => {
                 )}
 
                 <div className="flex items-center justify-between gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={isRevisionRequest}
-                            onChange={(e) => setIsRevisionRequest(e.target.checked)}
-                            className="w-4 h-4 rounded border-input text-primary focus:ring-2 focus:ring-ring"
-                        />
-                        <span className="text-sm text-foreground">Request revision</span>
-                    </label>
+                    {showRevisionCheckbox && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={isRevisionRequest}
+                                onChange={(e) => setIsRevisionRequest(e.target.checked)}
+                                className="w-4 h-4 rounded border-input text-primary focus:ring-2 focus:ring-ring"
+                            />
+                            <span className="text-sm text-foreground">Request revision</span>
+                        </label>
+                    )}
                     <button
                         onClick={handleSubmit}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors duration-fast"
+                        className={`flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors duration-fast ${!showRevisionCheckbox ? 'ml-auto' : ''}`}
                     >
                         <Icon name="PaperAirplaneIcon" size={16} />
                         Add Comment

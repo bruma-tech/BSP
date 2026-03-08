@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Icon from '@/app/components/ui/AppIcon';
-import AppImage from '@/app/components/ui/AppImage'
+import AppImage from '@/app/components/ui/AppImage';
 
 interface DocumentViewerProps {
     document: {
