@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import RequirementCard from './RequirementCard'
 import ProgressOverview from './ProgressOverview';
 import UpcomingDeadlines from './UpcomingDeadlines';
@@ -50,6 +51,8 @@ interface Notification {
 
 const SponsorDashboardInteractive = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  //const [isHydrated, setIsHydrated] = useState(false);
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [filteredRequirements, setFilteredRequirements] = useState<Requirement[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -234,11 +237,11 @@ const SponsorDashboardInteractive = () => {
   };
 
   const handleViewDetails = (id: string) => {
-    console.log('View details for requirement:', id);
+    router.push(`/sponsor-dashboard/document-review?requirementId=${id}`);
   };
 
   const handleViewHistory = (id: string) => {
-    console.log('View history for requirement:', id);
+    router.push(`/sponsor-dashboard/document-review?requirementId=${id}`);
   };
 
   const handleDismissNotification = (id: string) => {

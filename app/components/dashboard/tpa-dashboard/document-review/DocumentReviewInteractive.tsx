@@ -1,64 +1,68 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import DocumentViewer from './DocumentViewer';
-import DocumentMetadata from './DocumentMetadata';
-import SubmissionHistory from './SubmissionHistory';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { DocumentReviewLayout, type DocumentReviewData } from '@/app/components/dashboard/document-review';
 import ReviewControls from './ReviewControls';
-import CommentSystem from './CommentSystem';
-import VersionComparison from './VersionComparison';
 import Icon from '@/app/components/ui/AppIcon';
 
-interface DocumentReviewInteractiveProps {
-  initialDocument: any;
-  initialMetadata: any;
-  initialHistory: any[];
-  initialComments: any[];
-  initialVersions: any[];
+export interface SponsorReview {
+  sponsorId: string;
+  sponsorName: string;
+  data: DocumentReviewData;
 }
 
-const DocumentReviewInteractive = ({
-  initialDocument,
-  initialMetadata,
-  initialHistory,
-  initialComments,
-  initialVersions,
-}: DocumentReviewInteractiveProps) => {
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'metadata' | 'history' | 'comments' | 'versions'>('metadata');
+interface TPADocumentReviewProps {
+  sponsorReviews: SponsorReview[];
+  initialSponsorIndex: number;
+}
+
+const DocumentReviewInteractive = ({ sponsorReviews, initialSponsorIndex }: TPADocumentReviewProps) => {
+  const router = useRouter();
+  const [activeSponsorIndex, setActiveSponsorIndex] = useState(initialSponsorIndex);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [reviewDecision, setReviewDecision] = useState<'accept' | 'reject' | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
+  const activeReview = sponsorReviews[activeSponsorIndex];
+  const data = activeReview.data;
 
-  if (!isHydrated) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <Icon name="ArrowPathIcon" size={48} className="text-primary mx-auto mb-4 animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading document review...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleReview = async (decision: 'accept' | 'reject', comment: string) => {
+    if (!data.document) return;
 
-  const handleReview = (decision: 'accept' | 'reject', comment: string) => {
-    setReviewDecision(decision);
-    setShowSuccessMessage(true);
-    console.log('Review decision:', decision, 'Comment:', comment);
-    setTimeout(() => {
-      setShowSuccessMessage(false);
-    }, 3000);
+    try {
+      const response = await fetch(`/api/reviews/${data.reviewId}/decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentId: data.document.id,
+          decision,
+          comment,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setErrorMessage(result.message || 'Failed to submit decision');
+        setTimeout(() => setErrorMessage(null), 3000);
+        return;
+      }
+
+      setReviewDecision(decision);
+      setShowSuccessMessage(true);
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+        router.refresh();
+      }, 3000);
+    } catch {
+      setErrorMessage('Network error. Please try again.');
+      setTimeout(() => setErrorMessage(null), 3000);
+    }
   };
 
-  const handleAddComment = (content: string, isRevisionRequest: boolean) => {
-    console.log('New comment:', content, 'Revision request:', isRevisionRequest);
-  };
-
-  const handleCompareVersion = (versionId: string) => {
-    console.log('Comparing version:', versionId);
+  const handleAddComment = () => {
+    router.refresh();
   };
 
   return (
@@ -83,54 +87,58 @@ const DocumentReviewInteractive = ({
         </div>
       )}
 
-      <div className="flex flex-row gap-6">
-        <div className="flex-2">
-          <DocumentViewer document={initialDocument} />
-          <div className={activeTab === 'comments' ? 'block' : 'lg:block'}>
-            <CommentSystem comments={initialComments} onAddComment={handleAddComment} />
+      {errorMessage && (
+        <div className="fixed top-20 right-6 z-50 bg-card border border-error rounded-lg shadow-modal p-4 animate-slide-in-right">
+          <div className="flex items-start gap-3">
+            <Icon name="ExclamationTriangleIcon" size={24} className="text-error" />
+            <p className="text-sm font-semibold text-foreground">{errorMessage}</p>
           </div>
         </div>
-        <div className="flex-1 w-full lg:w-96 space-y-6">
-          <div className="lg:hidden">
-            <div className="flex gap-2 border-b border-border">
-              {[
-                { id: 'metadata', label: 'Info', icon: 'InformationCircleIcon' },
-                { id: 'history', label: 'History', icon: 'ClockIcon' },
-                { id: 'comments', label: 'Comments', icon: 'ChatBubbleLeftRightIcon' },
-                { id: 'versions', label: 'Versions', icon: 'DocumentDuplicateIcon' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors duration-fast ${activeTab === tab.id
-                    ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                >
-                  <Icon name={tab.icon as any} size={18} />
-                  <span className="hidden sm:inline">{tab.label}</span>
-                </button>
-              ))}
-            </div>
+      )}
+
+      {sponsorReviews.length > 1 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <Icon name="BuildingOfficeIcon" size={18} className="text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">
+              Reviewing sponsor ({activeSponsorIndex + 1} of {sponsorReviews.length})
+            </span>
           </div>
-
-          <div className="space-y-6">
-            <div className={activeTab === 'metadata' ? 'block' : 'lg:block'}>
-              <DocumentMetadata metadata={initialMetadata} />
-            </div>
-
-            <div className={activeTab === 'history' ? 'block' : 'lg:block'}>
-              <SubmissionHistory history={initialHistory} />
-            </div>
-            <div className={activeTab === 'versions' ? 'block' : 'lg:block'}>
-              <VersionComparison versions={initialVersions} onCompare={handleCompareVersion} />
-            </div>
-
-            <div className="block">
-              <ReviewControls documentId={initialDocument.id} onReview={handleReview} />
-            </div>
+          <div className="flex gap-2 flex-wrap">
+            {sponsorReviews.map((sr, index) => (
+              <button
+                key={sr.sponsorId}
+                onClick={() => setActiveSponsorIndex(index)}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                  index === activeSponsorIndex
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-card border border-border text-foreground hover:bg-muted'
+                }`}
+              >
+                {sr.sponsorName}
+                <span className={`ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs ${
+                  index === activeSponsorIndex
+                    ? 'bg-primary-foreground/20 text-primary-foreground'
+                    : 'bg-muted text-muted-foreground'
+                }`}>
+                  {sr.data.metadata.status}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
-      </div>
+      )}
+
+      <DocumentReviewLayout
+        data={data}
+        showRevisionCheckbox={true}
+        onAddComment={handleAddComment}
+        actionSlot={
+          data.document ? (
+            <ReviewControls documentId={data.document.id} onReview={handleReview} />
+          ) : null
+        }
+      />
     </>
   );
 };

@@ -7,6 +7,9 @@ export const commentSchema = z.object({
     .min(3, "Comment must be at least 3 characters"),
 
   isRevisionRequest: z.boolean(),
+
+  reviewId: z.string().optional(),
+  requirementId: z.string().optional(),
 });
 
 export type CommentFormData = z.infer<typeof commentSchema>;
