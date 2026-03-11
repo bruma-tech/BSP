@@ -30,6 +30,7 @@ interface Requirement {
     priority: 'low' | 'medium' | 'high';
 }
 
+// Maps Prisma enum values to the UI display values
 const statusMap: Record<string, Requirement['status']> = {
     OPEN: 'pending',
     IN_PROGRESS: 'in-progress',
@@ -38,7 +39,6 @@ const statusMap: Record<string, Requirement['status']> = {
     CLOSED: 'completed',
 };
 
-// Maps Prisma enum values to the UI display values
 const priorityMap: Record<string, Requirement['priority']> = {
     LOW: 'low',
     MEDIUM: 'medium',
