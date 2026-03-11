@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Icon from '@/app/components/ui/AppIcon';
 import type { RequirementFormData } from './CreateRequirementModal';
 import FilterPanel, { FilterState } from './FilterPanel'
@@ -37,6 +38,7 @@ const statusMap: Record<string, Requirement['status']> = {
     CLOSED: 'completed',
 };
 
+// Maps Prisma enum values to the UI display values
 const priorityMap: Record<string, Requirement['priority']> = {
     LOW: 'low',
     MEDIUM: 'medium',
@@ -99,7 +101,7 @@ function deriveSponsors(requirements: Requirement[]): Sponsor[] {
 }
 
 const RequirementManagementInteractive = () => {
-   
+    const router = useRouter();
     const [requirements, setRequirements] = useState<Requirement[]>(cache.requirements ?? []);
     const [sponsors, setSponsors] = useState<Sponsor[]>(cache.sponsors ?? []);
     const [isLoading, setIsLoading] = useState(cache.requirements === null);
@@ -160,7 +162,6 @@ const RequirementManagementInteractive = () => {
     });
 
     const sortedRequirements = [...filteredRequirements].sort((a, b) => {
-        
         let aValue: any = a[sortColumn as keyof Requirement];
         let bValue: any = b[sortColumn as keyof Requirement];
 
@@ -220,7 +221,7 @@ const RequirementManagementInteractive = () => {
     };
 
     const handleViewSubmissions = (id: string) => {
-        console.log('View submissions for:', id);
+        router.push(`/tpa-dashboard/document-review?requirementId=${id}`);
     };
 
     const handleSendReminder = (id: string) => {
@@ -258,13 +259,15 @@ const RequirementManagementInteractive = () => {
 
     if (isLoading) {
         return (
-            <div className="animate-pulse space-y-6">
-                <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map((i) => <div key={i} className="h-28 bg-muted rounded-lg" />)}
-                </div>
-                <div className="h-12 bg-muted rounded-lg" />
-                <div className="h-96 bg-muted rounded-lg" />
-            </div>
+            <div className="min-h-screen bg-background pt-16">
+                <div className="max-w-7xl mx-auto px-6 py-8">
+                    <div className="animate-pulse space-y-6">
+                        <div className="h-8 bg-muted rounded w-1/3" />
+                        <div className="h-32 bg-muted rounded" />
+                        <div className="h-96 bg-muted rounded" />
+                    </div>
+                    </div>
+                    </div>
         );
     }
 
