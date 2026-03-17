@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Icon from '@/app/components/ui/AppIcon';
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 
@@ -50,6 +51,7 @@ const RequirementTable = ({
     sortColumn,
     sortDirection,
 }: RequirementTableProps) => {
+    const router = useRouter();
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
     useEscapeKey(!!openMenuId,() =>setOpenMenuId(null));
@@ -172,8 +174,11 @@ const RequirementTable = ({
                                 />
                             </td>
                             <td className="px-4 py-4">
-                                <div>
-                                    <p className="text-sm font-medium text-foreground">{requirement.title}</p>
+                                <div
+                                    className="cursor-pointer"
+                                    onClick={() => router.push(`/tpa-dashboard/document-review?requirementId=${requirement.id}`)}
+                                >
+                                    <p className="text-sm font-medium text-foreground hover:text-primary transition-colors duration-200">{requirement.title}</p>
                                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
                                         {requirement.description}
                                     </p>

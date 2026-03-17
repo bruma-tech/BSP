@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Icon from '@/app/components/ui/AppIcon';
 import type { RequirementFormData } from './CreateRequirementModal';
 import FilterPanel, { FilterState } from './FilterPanel'
@@ -54,14 +55,62 @@ const typeMap: Record<string, string> = {
     OTHER: 'Other',
 };
 
+const cache: {
+    requirements: Requirement[] | null;
+    sponsors: Sponsor[] | null;
+} = { requirements: null, sponsors: null };
+
+function mapRequirement(r: any): Requirement {
+    return {
+        id: r.id,
+        title: r.title,
+        description: r.description ?? '',
+        type: typeMap[r.type] ?? r.type,
+        assignedSponsors: (r.sponsors ?? []).map((rs: any) => ({
+            id: rs.sponsor.id,
+            name: rs.sponsor.organizationName,
+            email: rs.sponsor.user?.email ?? '',
+        })),
+        dueDate: r.dueDate
+            ? new Date(r.dueDate).toLocaleDateString('en-US', {
+                month: '2-digit',
+                day: '2-digit',
+                year: 'numeric',
+            })
+            : '',
+        status: statusMap[r.status] ?? 'pending',
+        completionRate: 0,
+        totalDocuments: 0,
+        submittedDocuments: 0,
+        priority: priorityMap[r.priority] ?? 'medium',
+    };
+}
+
+function deriveSponsors(requirements: Requirement[]): Sponsor[] {
+    const seen = new Set<string>();
+    const sponsors: Sponsor[] = [];
+    for (const req of requirements) {
+        for (const s of req.assignedSponsors) {
+            if (!seen.has(s.id)) {
+                seen.add(s.id);
+                sponsors.push(s);
+            }
+        }
+    }
+    return sponsors;
+}
+
 const RequirementManagementInteractive = () => {
-    const [isHydrated, setIsHydrated] = useState(false);
+    const router = useRouter();
+    const [requirements, setRequirements] = useState<Requirement[]>(cache.requirements ?? []);
+    const [sponsors, setSponsors] = useState<Sponsor[]>(cache.sponsors ?? []);
+    const [isLoading, setIsLoading] = useState(cache.requirements === null);
+
     const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedRequirements, setSelectedRequirements] = useState<string[]>([]);
     const [sortColumn, setSortColumn] = useState('title');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-    const [sponsors, setSponsors] = useState<Sponsor[]>([]);
     const [filters, setFilters] = useState<FilterState>({
         status: [],
         priority: [],
@@ -70,51 +119,30 @@ const RequirementManagementInteractive = () => {
         dateRange: { start: '', end: '' },
     });
 
-    const [requirements, setRequirements] = useState<Requirement[]>([]);
+    
+    const fetchData = useCallback(async (invalidate = false) => {
+        if (cache.requirements !== null && !invalidate) return;
 
-    const fetchData = useCallback(async () => {
-        const [reqRes, sponsorRes] = await Promise.all([
-            fetch('/api/requirements'),
-            fetch('/api/sponsors'),
-        ]);
+        try {
+           
+            const res = await fetch('/api/requirements');
+            if (!res.ok) return;
 
-        if (sponsorRes.ok) {
-            const sponsorData = await sponsorRes.json();
-            setSponsors(sponsorData.data ?? []);
-        }
+            const json = await res.json();
+            const mapped: Requirement[] = (json.data ?? []).map(mapRequirement);
+            const derivedSponsors = deriveSponsors(mapped);
 
-        if (reqRes.ok) {
-            const reqData = await reqRes.json();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const mapped: Requirement[] = (reqData.data ?? []).map((r: any) => ({
-                id: r.id,
-                title: r.title,
-                description: r.description ?? '',
-                type: typeMap[r.type] ?? r.type,
-                assignedSponsors: (r.sponsors ?? []).map((rs: any) => ({
-                    id: rs.sponsor.id,
-                    name: rs.sponsor.organizationName,
-                    email: rs.sponsor.user?.email ?? '',
-                })),
-                dueDate: r.dueDate
-                    ? new Date(r.dueDate).toLocaleDateString('en-US', {
-                        month: '2-digit',
-                        day: '2-digit',
-                        year: 'numeric',
-                    })
-                    : '',
-                status: statusMap[r.status] ?? 'pending',
-                completionRate: 0,
-                totalDocuments: 0,
-                submittedDocuments: 0,
-                priority: priorityMap[r.priority] ?? 'medium',
-            }));
+            cache.requirements = mapped;
+            cache.sponsors = derivedSponsors;
+
             setRequirements(mapped);
+            setSponsors(derivedSponsors);
+        } finally {
+            setIsLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        setIsHydrated(true);
         fetchData();
     }, [fetchData]);
 
@@ -185,8 +213,7 @@ const RequirementManagementInteractive = () => {
     };
 
     const handleCreateRequirement = (_data: RequirementFormData) => {
-        // Re-fetch requirements to include the newly created one from the server
-        fetchData();
+        fetchData(true);
     };
 
     const handleEdit = (id: string) => {
@@ -194,7 +221,7 @@ const RequirementManagementInteractive = () => {
     };
 
     const handleViewSubmissions = (id: string) => {
-        console.log('View submissions for:', id);
+        router.push(`/tpa-dashboard/document-review?requirementId=${id}`);
     };
 
     const handleSendReminder = (id: string) => {
@@ -202,7 +229,11 @@ const RequirementManagementInteractive = () => {
     };
 
     const handleDelete = (id: string) => {
-        setRequirements(requirements.filter((r) => r.id !== id));
+        const updated = requirements.filter((r) => r.id !== id);
+        cache.requirements = updated;
+        cache.sponsors = deriveSponsors(updated);
+        setRequirements(updated);
+        setSponsors(cache.sponsors);
     };
 
     const handleBulkAssignSponsors = () => {
@@ -218,11 +249,15 @@ const RequirementManagementInteractive = () => {
     };
 
     const handleBulkDelete = () => {
-        setRequirements(requirements.filter((r) => !selectedRequirements.includes(r.id)));
+        const updated = requirements.filter((r) => !selectedRequirements.includes(r.id));
+        cache.requirements = updated;
+        cache.sponsors = deriveSponsors(updated);
+        setRequirements(updated);
+        setSponsors(cache.sponsors);
         setSelectedRequirements([]);
     };
 
-    if (!isHydrated) {
+    if (isLoading) {
         return (
             <div className="min-h-screen bg-background pt-16">
                 <div className="max-w-7xl mx-auto px-6 py-8">
@@ -231,8 +266,8 @@ const RequirementManagementInteractive = () => {
                         <div className="h-32 bg-muted rounded" />
                         <div className="h-96 bg-muted rounded" />
                     </div>
-                </div>
-            </div>
+                    </div>
+                    </div>
         );
     }
 
@@ -294,16 +329,14 @@ const RequirementManagementInteractive = () => {
                     <div className="flex items-center gap-1 bg-muted rounded-md p-1">
                         <button
                             onClick={() => setViewMode('table')}
-                            className={`p-2 rounded-md transition-colors duration-200 ${viewMode === 'table' ? 'bg-card text-foreground' : 'text-muted-foreground'
-                                }`}
+                            className={`p-2 rounded-md transition-colors duration-200 ${viewMode === 'table' ? 'bg-card text-foreground' : 'text-muted-foreground'}`}
                             aria-label="Table view"
                         >
                             <Icon name="TableCellsIcon" size={20} />
                         </button>
                         <button
                             onClick={() => setViewMode('grid')}
-                            className={`p-2 rounded-md transition-colors duration-200 ${viewMode === 'grid' ? 'bg-card text-foreground' : 'text-muted-foreground'
-                                }`}
+                            className={`p-2 rounded-md transition-colors duration-200 ${viewMode === 'grid' ? 'bg-card text-foreground' : 'text-muted-foreground'}`}
                             aria-label="Grid view"
                         >
                             <Icon name="Squares2X2Icon" size={20} />
