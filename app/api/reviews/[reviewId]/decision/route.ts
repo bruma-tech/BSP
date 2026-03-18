@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifySession } from "@/app/lib/dal";
 import prisma from "@/app/lib/prisma";
 import { z } from "zod";
+import { notifyDocumentApproved, notifyDocumentRejected } from "@/app/lib/notificationService";
 
 const decisionSchema = z.object({
   documentId: z.string().min(1, "Document ID is required"),
@@ -136,6 +137,23 @@ export async function POST(
         });
       }
     });
+
+    const reviewWithContext = await prisma.review.findUnique({
+      where: { id: reviewId },
+      include: {
+        sponsor: { select: { userId: true } },
+        requirement: { select: { title: true } },
+      },
+    });
+    
+    if (reviewWithContext) {
+      const notify = decision === "accept" ? notifyDocumentApproved : notifyDocumentRejected;
+      notify(
+        reviewWithContext.sponsor.userId,
+        reviewWithContext.requirement.title,
+        document.fileName
+      ).catch((err) => console.error("notify decision failed:", err));
+    }
 
     return NextResponse.json({
       success: true,

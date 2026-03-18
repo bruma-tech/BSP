@@ -3,6 +3,7 @@ import { requirementSchema } from "@/lib/validation/requirementSchema";
 import { verifySession } from "@/app/lib/dal";
 import prisma from "@/app/lib/prisma";
 import type { RequirementType, RequirementPriority, ApprovalWorkflow } from "@/src/generated/prisma/enums";
+import { notifyNewRequirement } from "@/app/lib/notificationService";
 // Maps form display values to Prisma enum values
 const typeMap: Record<string, RequirementType> = {
   "Financial Report": "FINANCIAL_REPORT",
@@ -270,6 +271,14 @@ export async function POST(req: Request) {
 
       return req;
     });
+    // ── Notify all assigned sponsors ──────────────────────────────────────────
+    notifyNewRequirement(
+      requirement.id,
+      data.title,
+      data.dueDate ? new Date(data.dueDate) : null,
+      validSponsorIds
+    ).catch((err) => console.error("notifyNewRequirement failed:", err));
+    // ─────────────────────────────────────────────────────────────────────────
 
     return NextResponse.json(
       {
@@ -287,3 +296,4 @@ export async function POST(req: Request) {
     );
   }
 }
+
