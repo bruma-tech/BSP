@@ -29,7 +29,12 @@ const ActivityItem = ({ type, title, description, timestamp, sponsor }: Activity
             icon: 'XCircleIcon' as const,
             bgColor: 'bg-error/10',
             iconColor: 'text-error'
-        }
+        },
+        comment: {
+            icon: 'ChatBubbleLeftEllipsisIcon' as const,
+            bgColor: 'bg-warning/10',
+            iconColor: 'text-warning'
+        },
     };
 
     const config = typeConfig[type];

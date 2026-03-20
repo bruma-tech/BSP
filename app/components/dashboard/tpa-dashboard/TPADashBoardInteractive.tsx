@@ -37,9 +37,22 @@ interface Sponsor {
     status: 'active' | 'pending' | 'inactive';
 }
 
+function relativeTime(isoString: string): string {
+    const diff = Date.now() - new Date(isoString).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs} hour${hrs === 1 ? '' : 's'} ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
 const TPADashboardInteractive = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+    const [activities, setActivities] = useState<Activity[]>([]);
+    const [activityLoading, setActivityLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'inactive'>('all');
     const [sortBy, setSortBy] = useState<'name' | 'pending' | 'activity'>('name');
@@ -53,12 +66,29 @@ const TPADashboardInteractive = () => {
                     setSponsors(json.data);
                 }
             } catch {
-                // fail silently — table shows empty state
+                // fail silently — table shows empty stat
             } finally {
                 setIsLoading(false);
             }
         }
         fetchSponsors();
+    }, []);
+
+    useEffect(() => {
+        async function fetchActivity() {
+            try {
+                const res = await fetch('/api/activity');
+                const json = await res.json();
+                if (res.ok && json.success) {
+                    setActivities(json.data);
+                }
+            } catch {
+                // fail silently
+            } finally {
+                setActivityLoading(false);
+            }
+        }
+        fetchActivity();
     }, []);
 
     const metrics: Metric[] = [
@@ -100,50 +130,7 @@ const TPADashboardInteractive = () => {
         }
     ];
 
-    const activities: Activity[] = [
-        {
-            id: 1,
-            type: 'submission',
-            title: 'New Document Submitted',
-            description: 'Annual Financial Report Q4 2024 uploaded for review',
-            timestamp: '5 minutes ago',
-            sponsor: 'Acme Corporation'
-        },
-        {
-            id: 2,
-            type: 'approval',
-            title: 'Document Approved',
-            description: 'Compliance Certificate has been approved and closed',
-            timestamp: '1 hour ago',
-            sponsor: 'Global Enterprises'
-        },
-        {
-            id: 3,
-            type: 'requirement',
-            title: 'New Requirement Created',
-            description: 'Q1 2025 Tax Documentation requirement assigned',
-            timestamp: '2 hours ago',
-            sponsor: 'Tech Solutions Inc'
-        },
-        {
-            id: 4,
-            type: 'rejection',
-            title: 'Document Rejected',
-            description: 'Insurance Policy document requires resubmission',
-            timestamp: '3 hours ago',
-            sponsor: 'Healthcare Partners'
-        },
-        {
-            id: 5,
-            type: 'submission',
-            title: 'Document Resubmitted',
-            description: 'Updated Audit Report with corrections uploaded',
-            timestamp: '4 hours ago',
-            sponsor: 'Finance Group LLC'
-        }
-    ];
-
-
+    
     const handleQuickAction = (action: string) => {
         if (action === "add-sponsor") modalBus.open("sponsor");
         if (action === "create-requirement") modalBus.open("requirement");
@@ -197,18 +184,50 @@ const TPADashboardInteractive = () => {
                 </div>
 
                 <div className="grid sm:grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    {/* Recent Activity */}
                     <div className="lg:col-span-2 bg-card border border-border rounded-lg p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
-                            <Link href="/document-review" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors duration-fast">
+                            <Link
+                                href="/tpa-dashboard/document-review"
+                                className="text-sm font-medium text-primary hover:text-primary/80 transition-colors duration-fast"
+                            >
                                 View All
                             </Link>
                         </div>
-                        <div className="space-y-2">
-                            {activities.map(activity => (
-                                <ActivityItem key={activity.id} {...activity} />
-                            ))}
-                        </div>
+
+                        {activityLoading ? (
+                            <div className="space-y-3">
+                                {[1, 2, 3].map(i => (
+                                    <div key={i} className="flex gap-4 p-4 border border-border rounded-lg animate-pulse">
+                                        <div className="w-10 h-10 rounded-full bg-muted shrink-0" />
+                                        <div className="flex-1 space-y-2">
+                                            <div className="h-3 bg-muted rounded w-1/3" />
+                                            <div className="h-2.5 bg-muted rounded w-2/3" />
+                                            <div className="h-2 bg-muted rounded w-1/4" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : activities.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <Icon name="ClockIcon" size={40} className="text-muted-foreground mb-3" />
+                                <p className="text-sm font-medium text-foreground">No activity yet</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Activity will appear here as sponsors submit documents and requirements are processed.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {activities.map(activity => (
+                                    <ActivityItem
+                                        key={activity.id}
+                                        {...activity}
+                                        timestamp={relativeTime(activity.timestamp)}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="bg-card border border-border rounded-lg p-6">
