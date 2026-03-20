@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { verifySession } from "@/app/lib/dal";
 import prisma from "@/app/lib/prisma";
 
-
 export async function GET() {
   const { isAuthenticated, user } = await verifySession();
 
