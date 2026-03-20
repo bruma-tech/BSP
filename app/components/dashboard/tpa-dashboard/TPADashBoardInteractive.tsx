@@ -77,7 +77,7 @@ const TPADashboardInteractive = () => {
     useEffect(() => {
         async function fetchActivity() {
             try {
-                const res = await fetch('/api/activity');
+                const res = await fetch('/api/ActivityTPA');
                 const json = await res.json();
                 if (res.ok && json.success) {
                     setActivities(json.data);
