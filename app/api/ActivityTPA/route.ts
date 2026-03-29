@@ -140,11 +140,11 @@ export async function GET() {
     }
 
     feed.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-    const top10 = feed.slice(0, 10);
+    const top7 = feed.slice(0, 7);
 
     return NextResponse.json({
       success: true,
-      data: top10.map((item) => ({
+      data: top7.map((item) => ({
         id: item.id,
         type: item.type,
         title: item.title,
