@@ -51,6 +51,7 @@ interface Notification {
 
 const SponsorDashboardInteractive = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [filteredRequirements, setFilteredRequirements] = useState<Requirement[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
