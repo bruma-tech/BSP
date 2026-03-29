@@ -14,7 +14,7 @@ export default async function RootLayout({
         <>
             <UnauthorizedModal />
             <div className="max-w-7xl mx-6 px-6">
-            <Header userRole={user.role as 'tpa' | 'sponsor'} userName={user.name} notificationCount={3} />
+            <Header userRole={user.role as 'tpa' | 'sponsor'} userName={user.name} />
             </div>
             {children}
         </>

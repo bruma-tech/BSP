@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { commentSchema } from "@/lib/validation/commentSchema";
 import { verifySession } from "@/app/lib/dal";
 import prisma from "@/app/lib/prisma";
-
+import { notifyFeedbackFromTPA, notifyCommentFromSponsor } from "@/app/lib/notificationService";
 /**
  * POST /api/comments
  * Create a new comment on a review or requirement.
@@ -113,6 +113,33 @@ export async function POST(req: Request) {
         author: { select: { id: true, name: true, role: true } },
       },
     });
+
+    if (reviewId) {
+      const reviewCtx = await prisma.review.findUnique({
+        where: { id: reviewId },
+        include: {
+          tpa: { select: { userId: true } },
+          sponsor: { select: { userId: true, organizationName: true } },
+          requirement: { select: { title: true } },
+        },
+      });
+    
+      if (reviewCtx) {
+        if (user.role === "tpa" || user.role === "user") {
+          notifyFeedbackFromTPA(
+            reviewCtx.sponsor.userId,
+            reviewCtx.requirement.title,
+            isRevisionRequest ?? false
+          ).catch((err) => console.error("notifyFeedbackFromTPA failed:", err));
+        } else if (user.role === "sponsor") {
+          notifyCommentFromSponsor(
+            reviewCtx.tpa.userId,
+            reviewCtx.sponsor.organizationName,
+            reviewCtx.requirement.title
+          ).catch((err) => console.error("notifyCommentFromSponsor failed:", err));
+        }
+      }
+    }
 
     return NextResponse.json({
       success: true,
